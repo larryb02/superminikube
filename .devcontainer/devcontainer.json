@@ -24,7 +24,6 @@
 		}
 	},
 	"mounts": [
-		"source=/home/obiwan/.ssh,target=/root/.ssh,type=bind",
 		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
