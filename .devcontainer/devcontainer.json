@@ -1,0 +1,38 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/java
+{
+	"name": "Java",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	// "image": "mcr.microsoft.com/devcontainers/java:1-21-bullseye",
+	"build": {
+		"dockerfile": "../Dockerfile"
+	},
+	// "features": {
+	// 	"ghcr.io/devcontainers/features/java:1": {
+	// 		"version": "none",
+	// 		"installMaven": "true",
+	// 		"installGradle": "false"
+	// 	}
+	// },
+	"customizations": {
+		"vscode": {
+			"settings": {},
+			"extensions": [
+				"redhat.java",
+				"vscjava.vscode-java-pack"
+			]
+		}
+	},
+	"mounts": [
+		"source=/home/obiwan/.ssh,target=/home/vscode/.ssh,type=bind",
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "java -version",
+	// Configure tool-specific properties.
+	// "customizations": {},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
