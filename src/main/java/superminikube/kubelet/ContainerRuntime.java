@@ -6,10 +6,11 @@ package superminikube.kubelet;
 import java.time.Duration;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
-import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.transport.DockerHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,9 +52,14 @@ public class ContainerRuntime {
 
     public void Create() {
         try {
-            this.dockerClient.createContainerCmd(null).exec();
+            logger.info("Creating container with image 'redis'");
+            CreateContainerResponse container = this.dockerClient.createContainerCmd(
+                "redis"
+            ).exec();
+            logger.info("It's alive! " + container.getId() + " " + container.getWarnings()); // TODO: Config log levels
         } catch (Exception e) {
             // TODO: handle exception
+            logger.error(e.toString());
         }
     }
 
@@ -66,5 +72,6 @@ public class ContainerRuntime {
     public static void main(String[] args) {
         ContainerRuntime cr = new ContainerRuntime();
         cr.Ping();
+        cr.Create();
     }
 }
