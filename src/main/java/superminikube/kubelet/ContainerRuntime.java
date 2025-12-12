@@ -10,6 +10,7 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.core.command.PullImageResultCallback;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 import org.slf4j.Logger;
@@ -50,28 +51,38 @@ public class ContainerRuntime {
         }
     }
 
-    public void Create() {
+    public Container Create() { 
         try {
             logger.info("Creating container with image 'redis'");
             CreateContainerResponse container = this.dockerClient.createContainerCmd(
                 "redis"
             ).exec();
-            logger.info("It's alive! " + container.getId() + " " + container.getWarnings()); // TODO: Config log levels
+            logger.info("It's alive! " + container.getId()); // TODO: Config log levels
+            return new Container();
         } catch (Exception e) {
             // TODO: handle exception
             logger.error(e.toString());
+            return null;
         }
     }
 
     public void Stop() {
     }
 
-    public void Pull() {
+    public void Pull(String image) {
+        try {
+            logger.info(String.format("Pulling image %s", image));
+            this.dockerClient.pullImageCmd(image).exec(new PullImageResultCallback()).awaitCompletion();
+        } catch (Exception e) {
+            // TODO: handle exception
+            logger.error(String.format("Failed to pull %s: %s", image, e.toString()));
+        }
     }
 
     public static void main(String[] args) {
         ContainerRuntime cr = new ContainerRuntime();
         cr.Ping();
         cr.Create();
+        cr.Pull(args[0]);
     }
 }
