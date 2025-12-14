@@ -37,4 +37,5 @@ func Run() {
 		os.Exit(1)
 	}
 	kubelet.Start()
+	defer kubelet.runtime.CloseRuntime()
 }

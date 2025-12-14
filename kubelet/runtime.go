@@ -21,6 +21,15 @@ func NewDockerRuntime() (*DockerRuntime, error) {
 	return &DockerRuntime{cli, context.Background()}, nil
 }
 
+func (d *DockerRuntime) CloseRuntime() error {
+	err := d.client.Close()
+	if err != nil {
+		slog.Error("Failed to close connection")
+		return err
+	}
+	return nil
+}
+
 func (d *DockerRuntime) Ping() error {
 	opts := client.PingOptions{}
 	resp, err := d.client.Ping(d.ctx, opts)
