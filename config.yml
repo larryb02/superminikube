@@ -1,0 +1,8 @@
+hostname: my-container
+image: alpine
+cmd:
+  - sh
+  - -c
+  - echo hello
+env:
+  - FOO=bar

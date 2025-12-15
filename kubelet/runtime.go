@@ -16,6 +16,7 @@ type DockerRuntime struct {
 func NewDockerRuntime() (*DockerRuntime, error) {
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
+		slog.Error("Failed to create Docker Runtime")
 		panic(err)
 	}
 	return &DockerRuntime{cli, context.Background()}, nil
