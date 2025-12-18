@@ -68,17 +68,10 @@ func (d *DockerRuntime) Pull(image string) error {
 }
 
 // This will return image ID
-func (d *DockerRuntime) CreateContainer() (string, error) {
-	opts := client.ContainerCreateOptions{
-		Image: "redis",
-		Platform: &ocispec.Platform{
-			Architecture: "amd64",
-			OS:           "linux",
-		},
-	}
+func (d *DockerRuntime) CreateContainer(opts client.ContainerCreateOptions) (string, error) {
 	res, err := d.client.ContainerCreate(d.ctx, opts)
 	if err != nil {
-		slog.Error("Failed to create container: %v", err)
+		slog.Error("Failed to create container", "msg", err)
 		return "", err
 	}
 	slog.Info("Created ", "container", res.ID)
