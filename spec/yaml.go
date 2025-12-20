@@ -77,7 +77,7 @@ func (s *Spec) Decode() (client.ContainerCreateOptions, error) {
 	return opts, nil
 }
 
-func CreateSpec(specfile string) ([]client.ContainerCreateOptions, error) {
+func CreateSpec(specfile string) (*Spec, error) {
 	var spec Spec
 	slog.Info("Opening File", "path", specfile)
 	data, err := os.ReadFile(specfile)
@@ -89,13 +89,14 @@ func CreateSpec(specfile string) ([]client.ContainerCreateOptions, error) {
 		slog.Error("Failed to parse spec file: ", "msg", err)
 		return nil, err
 	}
-	var containerOpts []client.ContainerCreateOptions
-	opts, err := spec.Decode()
-	if err != nil {
-		slog.Error("Error while decoding spec", "msg", err)
-		return nil, err
-	}
-	containerOpts = append(containerOpts, opts)
-	slog.Info("Created spec objects", "spec", spec)
-	return containerOpts, nil
+	// var containerOpts []client.ContainerCreateOptions
+	// opts, err := spec.Decode()
+	// if err != nil {
+	// 	slog.Error("Error while decoding spec", "msg", err)
+	// }
+	// containerOpts = append(containerOpts, opts)
+	// slog.Info("Created spec objects", "spec", spec)
+	// return containerOpts, nil
+	return &spec, nil
 }
+
