@@ -2,11 +2,13 @@ package kubelet
 
 import (
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"os"
 	"superminikube/kubelet/runtime"
 	"superminikube/spec"
 	"superminikube/types/pod"
+	"sync"
 )
 
 type Kubelet struct {
@@ -35,19 +37,27 @@ func (k *Kubelet) Start(specfile string) error {
 	// Load spec file
 	specs, err := spec.CreateSpec(specfile)
 	if err != nil {
-		return fmt.Errorf("failed to start kubelet: %v", err)
+		return fmt.Errorf("kubelet: %v", err)
 	}
-
-	pod, err := pod.NewPod(&specs.ContainerSpec)
-	if err != nil {
-		// looks like this because Start is a temp method -> not the end all be all for kubelet's behavior
-		return fmt.Errorf("failed to create pod: %v", err)
+	var g errgroup.Group
+	var mu sync.Mutex
+	for _, spec := range specs.ContainerSpec {
+		g.Go(func() error {
+			pod, err := pod.NewPod(&spec)
+			if err != nil {
+				return fmt.Errorf("kubelet: %v", err)
+			}
+			err = k.LaunchPod(pod)
+			if err != nil {
+				return fmt.Errorf("kubelet: %v", err)
+			}
+			mu.Lock()
+			k.pods = append(k.pods, pod)
+			mu.Unlock()
+			return nil
+		})
 	}
-	err = k.LaunchPod(pod)
-	if err != nil {
-		return fmt.Errorf("failed to launch pod: %v", err)
-	}
-	return nil
+	return g.Wait()
 }
 
 func (k *Kubelet) LaunchPod(p *pod.Pod) error {
