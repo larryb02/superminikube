@@ -11,7 +11,7 @@ import (
 
 type Kubelet struct {
 	runtime *runtime.DockerRuntime
-	pods    []pod.Pod
+	pods    []*pod.Pod
 }
 
 func NewKubelet() (*Kubelet, error) {
@@ -26,7 +26,7 @@ func NewKubelet() (*Kubelet, error) {
 	}
 	return &Kubelet{
 		runtime: runtime,
-		pods:    []pod.Pod{}, // agent will be assigned pods by controller eventually
+		pods:    []*pod.Pod{}, // agent will be assigned pods by controller eventually
 	}, nil
 }
 
