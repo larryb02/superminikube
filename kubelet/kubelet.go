@@ -37,8 +37,10 @@ func (k *Kubelet) Start(args []string) {
 		container_id, err := k.runtime.CreateContainer(specs[i])
 		if err != nil {
 			slog.Error("Failed to create container", "msg", err)
+			continue
 		}
-		// How do we want to handle this behavior
+		// How do we want to handle failures?
+		// I'm thinking track failures
 		err = k.runtime.StartContainer(container_id)
 		if err != nil {
 			slog.Error("Failed to start container", "msg", err)

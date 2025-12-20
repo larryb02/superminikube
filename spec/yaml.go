@@ -1,6 +1,7 @@
 package spec
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/netip"
@@ -28,9 +29,19 @@ type Port struct {
 	Containerport string `yaml:"containerport"`
 }
 
+func (cs *ContainerSpec) Validate() error {
+	if cs.Image == "" {
+		return errors.New("image cannot be nil")
+	}
+	return nil
+}
+
 func (s *Spec) Decode() (client.ContainerCreateOptions, error) {
 	// Convert ContainerSpec to client.CreateContainerOptions
-	slog.Info("Decoding 'config.yml' (probably want the actual file here or somewhere in logs)", "spec", s)
+	if err := s.ContainerSpec.Validate(); err != nil {
+		slog.Error("Failed to decode spec: ", "msg", err)
+		return client.ContainerCreateOptions{}, err
+	}
 	var env []string
 	volumes := make(map[string]struct{})
 	for k, v := range s.ContainerSpec.Env {
@@ -82,6 +93,7 @@ func CreateSpec(specfile string) ([]client.ContainerCreateOptions, error) {
 	opts, err := spec.Decode()
 	if err != nil {
 		slog.Error("Error while decoding spec", "msg", err)
+		return nil, err
 	}
 	containerOpts = append(containerOpts, opts)
 	slog.Info("Created spec objects", "spec", spec)
