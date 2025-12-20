@@ -2,13 +2,14 @@ package kubelet
 
 import (
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"os"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 	"superminikube/kubelet/runtime"
 	"superminikube/spec"
 	"superminikube/types/pod"
-	"sync"
 )
 
 type Kubelet struct {
@@ -77,6 +78,7 @@ func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	if err != nil {
 		return fmt.Errorf("failed to launch pod: %v", err)
 	}
+	p.CurrentState = pod.PodRunning
 	return nil
 }
 

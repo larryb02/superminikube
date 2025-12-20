@@ -13,8 +13,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// TODO: make Spec an interface that implements Decode
 type Spec struct {
-	ContainerSpec ContainerSpec `yaml:"spec"`
+	ContainerSpec []ContainerSpec `yaml:"spec"`
 }
 
 type ContainerSpec struct {
@@ -36,22 +37,22 @@ func (cs *ContainerSpec) Validate() error {
 	return nil
 }
 
-func (s *Spec) Decode() (client.ContainerCreateOptions, error) {
+func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	// Convert ContainerSpec to client.CreateContainerOptions
-	if err := s.ContainerSpec.Validate(); err != nil {
+	if err := cs.Validate(); err != nil {
 		slog.Error("Failed to decode spec: ", "msg", err)
 		return client.ContainerCreateOptions{}, err
 	}
 	var env []string
 	volumes := make(map[string]struct{})
-	for k, v := range s.ContainerSpec.Env {
+	for k, v := range cs.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
-	for _, volume := range s.ContainerSpec.Volumes {
+	for _, volume := range cs.Volumes {
 		volumes[volume] = struct{}{}
 	}
 	portMap := make(network.PortMap)
-	for _, port := range s.ContainerSpec.Ports {
+	for _, port := range cs.Ports {
 		containerport, err := network.ParsePort(port.Containerport)
 		if err != nil {
 			slog.Error("Failed to configure port", "msg", err)
@@ -65,7 +66,7 @@ func (s *Spec) Decode() (client.ContainerCreateOptions, error) {
 	}
 	opts := client.ContainerCreateOptions{
 		Config: &container.Config{
-			Image:   s.ContainerSpec.Image,
+			Image:   cs.Image,
 			Env:     env,
 			Volumes: volumes,
 		},
