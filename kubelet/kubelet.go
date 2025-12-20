@@ -32,7 +32,7 @@ func NewKubelet() (*Kubelet, error) {
 	}, nil
 }
 
-func (k *Kubelet) Start(specfile string) error {
+func (k *Kubelet) Apply(specfile string) error {
 	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
 	// Load spec file
 	specs, err := spec.CreateSpec(specfile)
@@ -88,7 +88,7 @@ func Run(args []string) {
 		os.Exit(1)
 	}
 	defer kubelet.runtime.CloseRuntime()
-	err = kubelet.Start(args[1])
+	err = kubelet.Apply(args[1])
 	if err != nil {
 		slog.Error("Something went wrong: ", "msg", err)
 		os.Exit(1)
