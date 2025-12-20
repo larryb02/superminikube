@@ -7,7 +7,6 @@ import (
 	"superminikube/kubelet/runtime"
 	"superminikube/spec"
 	"superminikube/types/pod"
-	// "superminikube/spec"
 )
 
 type Kubelet struct {
@@ -41,42 +40,35 @@ func (k *Kubelet) Start(specfile string) error {
 
 	pod, err := pod.NewPod(&specs.ContainerSpec)
 	if err != nil {
+		// looks like this because Start is a temp method -> not the end all be all for kubelet's behavior
 		return fmt.Errorf("failed to create pod: %v", err)
 	}
-	k.LaunchPod(pod)
+	err = k.LaunchPod(pod)
+	if err != nil {
+		return fmt.Errorf("failed to launch pod: %v", err)
+	}
 	return nil
 }
 
-func (k *Kubelet) LaunchPod(p *pod.Pod) {
-	
+func (k *Kubelet) LaunchPod(p *pod.Pod) error {
+	err := k.runtime.Pull(p.ContainerSpec.Image)
+	if err != nil {
+		return fmt.Errorf("failed to launch pod: %v", err)
+	}
+	containerOpts, err := p.ContainerSpec.Decode()
+	if err != nil {
+		return fmt.Errorf("failed to launch pod: %v", err)
+	}
+	containerId, err := k.runtime.CreateContainer(containerOpts)
+	if err != nil {
+		return fmt.Errorf("failed to launch pod: %v", err)
+	}
+	err = k.runtime.StartContainer(containerId)
+	if err != nil {
+		return fmt.Errorf("failed to launch pod: %v", err)
+	}
+	return nil
 }
-
-// func (k *Kubelet) Start(args []string) {
-// 	// sanity check
-// 	err := k.runtime.Ping()
-// 	if err != nil {
-// 		slog.Error("Failed to reach Docker Engine", "error", err)
-// 		slog.Error("Kubelet failed to start")
-// 		return
-// 	}
-// 	slog.Info("Started Kubelet")
-// 	specs, err := spec.CreateSpec(args[1])
-// 	if err != nil {
-// 		slog.Error("Failed to create spec", "msg", err)
-// 		return
-// 	}
-// 	for i:= range specs {
-// 		container_id, err := k.runtime.CreateContainer(specs[i])
-// 		if err != nil {
-// 			slog.Error("Failed to create container", "msg", err)
-// 		}
-// 		// How do we want to handle this behavior
-// 		err = k.runtime.StartContainer(container_id)
-// 		if err != nil {
-// 			slog.Error("Failed to start container", "msg", err)
-// 		}
-// 	}
-// }
 
 func Run(args []string) {
 	slog.Info("Starting Kubelet...")
@@ -91,4 +83,5 @@ func Run(args []string) {
 		slog.Error("Something went wrong: ", "msg", err)
 		os.Exit(1)
 	}
+	slog.Info("Successfully launched pods... manage em yourself!")
 }
