@@ -8,6 +8,14 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+type Runtime interface {
+	Ping() error
+	Pull(image string) error
+	StartContainer(ID string) error
+	CreateContainer(opts client.ContainerCreateOptions) (string, error)
+	CloseRuntime() error
+}
+
 type DockerRuntime struct {
 	client *client.Client
 	ctx    context.Context
@@ -21,7 +29,7 @@ func NewDockerRuntime() (*DockerRuntime, error) {
 	}
 	// things we want to store
 	// API version
-	// 
+	//
 	return &DockerRuntime{cli, context.Background()}, nil
 }
 

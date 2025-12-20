@@ -13,22 +13,18 @@ import (
 )
 
 type Kubelet struct {
-	runtime *runtime.DockerRuntime
+	runtime runtime.Runtime
 	pods    []*pod.Pod
 }
 
-func NewKubelet() (*Kubelet, error) {
-	runtime, err := runtime.NewDockerRuntime()
-	if err != nil {
-		return nil, fmt.Errorf("Kubelet failed to start: %v", err)
-	}
+func NewKubelet(rt runtime.Runtime) (*Kubelet, error) {
 	// sanity check
-	err = runtime.Ping()
+	err := rt.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("Kubelet failed to start: %v", err)
 	}
 	return &Kubelet{
-		runtime: runtime,
+		runtime: rt,
 		pods:    []*pod.Pod{}, // agent will be assigned pods by controller eventually
 	}, nil
 }
@@ -84,7 +80,12 @@ func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 
 func Run(args []string) {
 	slog.Info("Starting Kubelet...")
-	kubelet, err := NewKubelet()
+	rt, err := runtime.NewDockerRuntime()
+	if err != nil {
+		slog.Error("Failed to start kubelet: ", "error", err)
+		os.Exit(1)
+	}
+	kubelet, err := NewKubelet(rt)
 	if err != nil {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
