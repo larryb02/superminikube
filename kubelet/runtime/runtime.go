@@ -2,8 +2,10 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
+	"github.com/moby/moby/api/types/jsonstream"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -64,16 +66,19 @@ func (d *DockerRuntime) Pull(image string) error {
 	slog.Info("Attempting to pull ", "image", image)
 	resp, err := d.client.ImagePull(d.ctx, image, opts)
 	if err != nil {
-		slog.Error("Failed to pull image ", "error", err)
+		return fmt.Errorf("failed to pull image: %v", err)
 	}
 	msg := resp.JSONMessages(d.ctx)
+	errs := []*jsonstream.Error{}
 	for m := range msg {
 		if m.Error != nil {
-			slog.Error("Error: ", "error", m.Error.Message)
-			return nil
+			errs = append(errs, m.Error)
 		} else {
 			slog.Info("Status: ", "status", m.Status)
 		}
+	}
+	if errs != nil {
+		return fmt.Errorf("failed to pull image: %v", errs) // NOTE: will probably need to do some formatting
 	}
 	return nil
 }

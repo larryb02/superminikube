@@ -126,5 +126,6 @@ func Run(args []string) {
 		slog.Error("Something went wrong: ", "msg", err)
 		os.Exit(1)
 	}
+	fmt.Printf("checking something: %v", err)
 	slog.Info("Successfully launched pods... manage em yourself!")
 }
