@@ -2,7 +2,6 @@ package kubelet
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"sync"
 
