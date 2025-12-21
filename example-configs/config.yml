@@ -1,9 +1,9 @@
 spec:
-  image:
-  env:
-    POSTGRES_PASSWORD: password
-  ports:
-    - hostport: 9995
-      containerport: 8081
-  volumes:
-    - app
+  - image: postgres
+    env:
+      POSTGRES_PASSWORD: password
+    ports:
+      - hostport: 9995
+        containerport: 8081
+    volumes:
+      - app

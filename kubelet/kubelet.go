@@ -78,6 +78,36 @@ func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	return nil
 }
 
+func (k *Kubelet) GetCurrentState() {
+	// periodically poll and get pods state
+	// if a pod has failed report for reconciliation
+	// spawn group of goroutines that sleep every couple seconds
+	// then checks status, if container failed send status to channel?
+	// or just periodically send a status to channel and update pod status that way
+	var g errgroup.Group
+	ch := make(chan *pod.Pod) // TODO: need this channeld defined in the kubelet struct
+	podsCopy := make([]*pod.Pod, len(k.pods))
+	copy(podsCopy, k.pods)
+	slog.Debug("Checking status of pods", "pods", podsCopy)
+	for _, p := range k.pods {
+		g.Go(func() error {
+			status := p.CurrentState
+			if status == pod.PodFailed {
+				ch <- p
+			}
+			return nil
+		})
+	}
+}
+
+func (k *Kubelet) GetPods() ([]pod.Pod, error) {
+	podsCopy := make([]pod.Pod, len(k.pods))
+	for i, p := range k.pods {
+		podsCopy[i] = *p
+	}
+	return podsCopy, nil
+}
+
 func Run(args []string) {
 	slog.Info("Starting Kubelet...")
 	rt, err := runtime.NewDockerRuntime()
