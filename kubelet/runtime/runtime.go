@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"superminikube/logger"
 
 	"github.com/moby/moby/api/types/jsonstream"
 	"github.com/moby/moby/client"
@@ -26,7 +26,7 @@ type DockerRuntime struct {
 func NewDockerRuntime() (*DockerRuntime, error) {
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
-		slog.Error("Failed to create Docker Runtime")
+		logger.Logger.Error("Failed to create Docker Runtime") // maybe we don't want to shut down the application here?
 		panic(err)
 	}
 	// things we want to store
@@ -51,7 +51,7 @@ func (d *DockerRuntime) Ping() error {
 		slog.Error("Failed to ping Docker")
 		return err
 	}
-	slog.Info("Successfully pinged Docker", "response", resp)
+	logger.Logger.Info("Successfully pinged Docker", "response", resp)
 	return nil
 }
 
@@ -63,7 +63,7 @@ func (d *DockerRuntime) Pull(image string) error {
 		},
 	},
 	}
-	slog.Info("Attempting to pull ", "image", image)
+	logger.Logger.Info("Attempting to pull ", "image", image)
 	resp, err := d.client.ImagePull(d.ctx, image, opts)
 	if err != nil {
 		return fmt.Errorf("failed to pull image: %v", err)
@@ -74,10 +74,10 @@ func (d *DockerRuntime) Pull(image string) error {
 		if m.Error != nil {
 			errs = append(errs, m.Error)
 		} else {
-			slog.Info("Status: ", "status", m.Status)
+			logger.Logger.Info("Status: ", "status", m.Status)
 		}
 	}
-	if errs != nil {
+	if len(errs) > 0 {
 		return fmt.Errorf("failed to pull image: %v", errs) // NOTE: will probably need to do some formatting
 	}
 	return nil
@@ -87,10 +87,10 @@ func (d *DockerRuntime) Pull(image string) error {
 func (d *DockerRuntime) CreateContainer(opts client.ContainerCreateOptions) (string, error) {
 	res, err := d.client.ContainerCreate(d.ctx, opts)
 	if err != nil {
-		slog.Error("Failed to create container", "msg", err)
+		logger.Logger.Error("Failed to create container", "msg", err)
 		return "", err
 	}
-	slog.Info("Created ", "container", res.ID)
+	logger.Logger.Info("Created ", "container", res.ID)
 	return res.ID, nil
 }
 
@@ -109,7 +109,7 @@ func (d *DockerRuntime) StartContainer(ID string) error {
 	opts := client.ContainerStartOptions{}
 	_, err := d.client.ContainerStart(d.ctx, ID, opts)
 	if err != nil {
-		slog.Error("Failed to start container: ", "id", ID) //TODO: probably want ID, name, etc here later
+		logger.Logger.Error("Failed to start container: ", "id", ID) //TODO: probably want ID, name, etc here later
 		return err
 	}
 	slog.Info("Started ", "container", ID)
@@ -120,9 +120,9 @@ func (d *DockerRuntime) StopContainer(ID string) error {
 	opts := client.ContainerStopOptions{}
 	_, err := d.client.ContainerStop(d.ctx, ID, opts)
 	if err != nil {
-		slog.Error("Failed to stop container ", "id", ID)
+		logger.Logger.Error("Failed to stop container ", "id", ID)
 		return err
 	}
-	slog.Info("Stopped", "id", ID)
+	logger.Logger.Info("Stopped", "id", ID)
 	return nil
 }

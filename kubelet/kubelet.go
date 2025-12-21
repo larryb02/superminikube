@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"superminikube/kubelet/runtime"
+	"superminikube/logger"
 	"superminikube/spec"
 	"superminikube/types/pod"
 )
@@ -109,23 +110,23 @@ func (k *Kubelet) GetPods() ([]pod.Pod, error) {
 }
 
 func Run(args []string) {
-	slog.Info("Starting Kubelet...")
+	logger.Logger.Info("Starting Kubelet...")
 	rt, err := runtime.NewDockerRuntime()
 	if err != nil {
-		slog.Error("Failed to start kubelet: ", "error", err)
+		logger.Logger.Error("Failed to start kubelet: ", "error", err)
 		os.Exit(1)
 	}
 	kubelet, err := NewKubelet(rt)
 	if err != nil {
-		slog.Error("Failed to start Kubelet:", "error", err)
+		logger.Logger.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
 	}
 	defer kubelet.runtime.CloseRuntime()
 	err = kubelet.Apply(args[1])
 	if err != nil {
-		slog.Error("Something went wrong: ", "msg", err)
+		logger.Logger.Error("Something went wrong: ", "msg", err)
 		os.Exit(1)
 	}
 	fmt.Printf("checking something: %v", err)
-	slog.Info("Successfully launched pods... manage em yourself!")
+	logger.Logger.Info("Successfully launched pods... manage em yourself!")
 }

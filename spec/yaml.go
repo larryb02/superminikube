@@ -3,7 +3,6 @@ package spec
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/netip"
 	"os"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"gopkg.in/yaml.v3"
+	"superminikube/logger"
 )
 
 // TODO: make Spec an interface that implements Decode
@@ -40,7 +40,7 @@ func (cs *ContainerSpec) Validate() error {
 func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	// Convert ContainerSpec to client.CreateContainerOptions
 	if err := cs.Validate(); err != nil {
-		slog.Error("Failed to decode spec: ", "msg", err)
+		logger.Logger.Error("Failed to decode spec: ", "msg", err)
 		return client.ContainerCreateOptions{}, err
 	}
 	var env []string
@@ -55,7 +55,7 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	for _, port := range cs.Ports {
 		containerport, err := network.ParsePort(port.Containerport)
 		if err != nil {
-			slog.Error("Failed to configure port", "msg", err)
+			logger.Logger.Error("Failed to configure port", "msg", err)
 			return client.ContainerCreateOptions{}, err
 		}
 		portMap[containerport] = []network.PortBinding{{
@@ -80,14 +80,14 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 
 func CreateSpec(specfile string) (*Spec, error) {
 	var spec Spec
-	slog.Info("Opening File", "path", specfile)
+	logger.Logger.Info("Opening File", "path", specfile)
 	data, err := os.ReadFile(specfile)
 	if err != nil {
-		slog.Error("Failed to read specfile", "msg", err)
+		logger.Logger.Error("Failed to read specfile", "msg", err)
 		return nil, err
 	}
 	if err := yaml.Unmarshal(data, &spec); err != nil {
-		slog.Error("Failed to parse spec file: ", "msg", err)
+		logger.Logger.Error("Failed to parse spec file: ", "msg", err)
 		return nil, err
 	}
 	// var containerOpts []client.ContainerCreateOptions
