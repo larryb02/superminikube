@@ -3,6 +3,7 @@ package spec
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/netip"
 	"os"
 
@@ -55,7 +56,7 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	for _, port := range cs.Ports {
 		containerport, err := network.ParsePort(port.Containerport)
 		if err != nil {
-			logger.Logger.Error("Failed to configure port", "msg", err)
+			slog.Error("Failed to configure port", "msg", err)
 			return client.ContainerCreateOptions{}, err
 		}
 		portMap[containerport] = []network.PortBinding{{
@@ -80,14 +81,14 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 
 func CreateSpec(specfile string) (*Spec, error) {
 	var spec Spec
-	logger.Logger.Info("Opening File", "path", specfile)
+	slog.Info("Opening File", "path", specfile)
 	data, err := os.ReadFile(specfile)
 	if err != nil {
-		logger.Logger.Error("Failed to read specfile", "msg", err)
+		slog.Error("Failed to read specfile", "msg", err)
 		return nil, err
 	}
 	if err := yaml.Unmarshal(data, &spec); err != nil {
-		logger.Logger.Error("Failed to parse spec file: ", "msg", err)
+		slog.Error("Failed to parse spec file: ", "msg", err)
 		return nil, err
 	}
 	// var containerOpts []client.ContainerCreateOptions
