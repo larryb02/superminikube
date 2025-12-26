@@ -108,6 +108,21 @@ func (k *Kubelet) GetPods() ([]pod.Pod, error) {
 	return podsCopy, nil
 }
 
+// Cleanup Kubelet if process killed/stopped
+// stops and removes containers running in pods
+func (k *Kubelet) Cleanup() error {
+	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
+	for _, p := range k.pods {
+		err := k.runtime.StopContainer(p.ContainerId)
+		if err != nil {
+			return fmt.Errorf("failed to stop container: %v", err)
+		}
+		stoppedContainers = append(stoppedContainers, p.ContainerId)
+	}
+	slog.Debug("containers stopped", "containers", stoppedContainers)
+	return nil
+}
+
 func Run(args []string) {
 	logger.Logger.Info("Starting Kubelet...")
 	rt, err := runtime.NewDockerRuntime()
@@ -127,5 +142,8 @@ func Run(args []string) {
 		os.Exit(1)
 	}
 	fmt.Printf("checking something: %v", err)
-	logger.Logger.Info("Successfully launched pods... manage em yourself!")
+	slog.Info("Successfully launched pods... manage em yourself!")
+	<-ctx.Done()
+	kubelet.Cleanup()
+	os.Exit(0)
 }
