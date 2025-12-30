@@ -1,14 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
-	"superminikube/kubelet"
+	// "superminikube/kubelet"
+	"superminikube/cmd/kubelet/app"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
-	kubelet.Run(os.Args) // Note: Passing args is temporary, kubelet will eventually receive commands over http
+	cmd := app.NewRootCommand()
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

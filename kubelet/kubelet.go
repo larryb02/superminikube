@@ -122,28 +122,3 @@ func (k *Kubelet) Cleanup() error {
 	slog.Debug("containers stopped", "containers", stoppedContainers)
 	return nil
 }
-
-func Run(args []string) {
-	logger.Logger.Info("Starting Kubelet...")
-	rt, err := runtime.NewDockerRuntime()
-	if err != nil {
-		logger.Logger.Error("Failed to start kubelet: ", "error", err)
-		os.Exit(1)
-	}
-	kubelet, err := NewKubelet(rt)
-	if err != nil {
-		logger.Logger.Error("Failed to start Kubelet:", "error", err)
-		os.Exit(1)
-	}
-	defer kubelet.runtime.CloseRuntime()
-	err = kubelet.Apply(args[1])
-	if err != nil {
-		logger.Logger.Error("Something went wrong: ", "msg", err)
-		os.Exit(1)
-	}
-	fmt.Printf("checking something: %v", err)
-	slog.Info("Successfully launched pods... manage em yourself!")
-	<-ctx.Done()
-	kubelet.Cleanup()
-	os.Exit(0)
-}
