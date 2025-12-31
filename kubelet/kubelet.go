@@ -1,23 +1,22 @@
 package kubelet
 
 import (
+	"context"
 	"fmt"
-	"os"
-	"sync"
+	"log/slog"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/google/uuid"
 	"superminikube/kubelet/runtime"
-	"superminikube/logger"
-	"superminikube/spec"
 	"superminikube/types/pod"
 )
 
 type Kubelet struct {
 	runtime runtime.Runtime
-	pods    []*pod.Pod
+	pods    map[uuid.UUID]*pod.Pod
+	ctx     context.Context
 }
 
-func NewKubelet(rt runtime.Runtime) (*Kubelet, error) {
+func NewKubelet(rt runtime.Runtime, ctx context.Context) (*Kubelet, error) {
 	// sanity check
 	err := rt.Ping()
 	if err != nil {
@@ -25,37 +24,38 @@ func NewKubelet(rt runtime.Runtime) (*Kubelet, error) {
 	}
 	return &Kubelet{
 		runtime: rt,
-		pods:    []*pod.Pod{}, // agent will be assigned pods by controller eventually
+		pods:    map[uuid.UUID]*pod.Pod{},
+		ctx:     ctx,
 	}, nil
 }
 
-func (k *Kubelet) Apply(specfile string) error {
-	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
-	// Load spec file
-	specs, err := spec.CreateSpec(specfile)
-	if err != nil {
-		return fmt.Errorf("kubelet: %v", err)
-	}
-	var g errgroup.Group
-	var mu sync.Mutex
-	for _, spec := range specs.ContainerSpec {
-		g.Go(func() error {
-			pod, err := pod.NewPod(&spec)
-			if err != nil {
-				return fmt.Errorf("kubelet: %v", err)
-			}
-			err = k.LaunchPod(pod)
-			if err != nil {
-				return fmt.Errorf("kubelet: %v", err)
-			}
-			mu.Lock()
-			k.pods = append(k.pods, pod)
-			mu.Unlock()
-			return nil
-		})
-	}
-	return g.Wait()
-}
+// func (k *Kubelet) Apply(specfile string) error {
+// 	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
+// 	// Load spec file
+// 	specs, err := spec.CreateSpec(specfile)
+// 	if err != nil {
+// 		return fmt.Errorf("kubelet: %v", err)
+// 	}
+// 	var g errgroup.Group
+// 	var mu sync.Mutex
+// 	for _, spec := range specs.ContainerSpec {
+// 		g.Go(func() error {
+// 			pod, err := pod.NewPod(&spec)
+// 			if err != nil {
+// 				return fmt.Errorf("kubelet: %v", err)
+// 			}
+// 			err = k.LaunchPod(pod)
+// 			if err != nil {
+// 				return fmt.Errorf("kubelet: %v", err)
+// 			}
+// 			mu.Lock()
+// 			k.pods[pod.UID] = pod
+// 			mu.Unlock()
+// 			return nil
+// 		})
+// 	}
+// 	return g.Wait()
+// }
 
 func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	err := k.runtime.Pull(p.ContainerSpec.Image)
@@ -74,51 +74,30 @@ func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	if err != nil {
 		return fmt.Errorf("failed to launch pod: %v", err)
 	}
+	p.ContainerId = containerId
 	p.CurrentState = pod.PodRunning
 	return nil
 }
 
-func (k *Kubelet) GetCurrentState() {
-	// periodically poll and get pods state
-	// if a pod has failed report for reconciliation
-	// spawn group of goroutines that sleep every couple seconds
-	// then checks status, if container failed send status to channel?
-	// or just periodically send a status to channel and update pod status that way
-	var g errgroup.Group
-	ch := make(chan *pod.Pod) // TODO: need this channeld defined in the kubelet struct
-	podsCopy := make([]*pod.Pod, len(k.pods))
-	copy(podsCopy, k.pods)
-	slog.Debug("Checking status of pods", "pods", podsCopy)
-	for _, p := range k.pods {
-		g.Go(func() error {
-			status := p.CurrentState
-			if status == pod.PodFailed {
-				ch <- p
-			}
-			return nil
-		})
-	}
-}
-
-func (k *Kubelet) GetPods() ([]pod.Pod, error) {
-	podsCopy := make([]pod.Pod, len(k.pods))
-	for i, p := range k.pods {
-		podsCopy[i] = *p
-	}
-	return podsCopy, nil
+// TODO: Remove
+func (k *Kubelet) GetPods() (map[uuid.UUID]*pod.Pod, error) {
+	return k.pods, nil // TODO: return a deep copy
 }
 
 // Cleanup Kubelet if process killed/stopped
 // stops and removes containers running in pods
-func (k *Kubelet) Cleanup() error {
+func (k *Kubelet) Cleanup() []error {
 	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
+	errs := make([]error, 0)
 	for _, p := range k.pods {
 		err := k.runtime.StopContainer(p.ContainerId)
 		if err != nil {
-			return fmt.Errorf("failed to stop container: %v", err)
+			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.ContainerId, err)
+			errs = append(errs, err)
+			continue
 		}
-		stoppedContainers = append(stoppedContainers, p.ContainerId)
+		stoppedContainers = append(stoppedContainers, p.ContainerId) // probably better if you list the containers that FAILED
 	}
 	slog.Debug("containers stopped", "containers", stoppedContainers)
-	return nil
+	return errs
 }

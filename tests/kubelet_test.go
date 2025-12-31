@@ -1,10 +1,12 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
-	"github.com/moby/moby/client"
 	"superminikube/kubelet"
+
+	"github.com/moby/moby/client"
 )
 
 type MockRuntime struct {
@@ -29,15 +31,18 @@ func (m *MockRuntime) CreateContainer(opts client.ContainerCreateOptions) (strin
 func (m *MockRuntime) CloseRuntime() error {
 	return nil
 }
+func (m *MockRuntime) Inspect(ID string) (client.ContainerInspectResult, error) {
+	return client.ContainerInspectResult{}, nil
+}
+func (m *MockRuntime) StopContainer(ID string) error {
+	return nil
+}
 func TestApply(t *testing.T) {
-	testSpecFile := "../example-configs/test-config.yml"
+	// testSpecFile := "../example-configs/test-config.yml"
+	ctx := context.TODO()
 	rt := MockRuntime{}
-	k, err := kubelet.NewKubelet(&rt)
+	_, err := kubelet.NewKubelet(&rt, ctx)
 	if err != nil {
 		t.Fatalf("failed to create kubelet: %v", err)
-	}
-	err = k.Apply(testSpecFile)
-	if err != nil {
-		t.Errorf("Apply() = %v", err)
 	}
 }

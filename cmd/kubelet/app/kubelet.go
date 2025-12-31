@@ -32,6 +32,7 @@ func Run() {
 		os.Interrupt,
 		syscall.SIGTERM)
 	defer stop()
+	// TODO: create runtime inside agent
 	rt, err := runtime.NewDockerRuntime()
 	if err != nil {
 		slog.Error("Failed to start kubelet: ", "error", err)
@@ -42,16 +43,7 @@ func Run() {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
 	}
-	// defer kubelet.runtime.CloseRuntime()
-	// instead of apply we start an http server that receives commands
-	err = kubelet.Apply("./example-configs/config.yml")
-	if err != nil {
-		slog.Error("Something went wrong: ", "msg", err)
-		os.Exit(1)
-	}
 	fmt.Printf("checking something: %v", err)
-	slog.Info("Successfully launched pods... manage em yourself!")
 	<-ctx.Done()
 	kubelet.Cleanup()
-	os.Exit(0)
 }

@@ -13,9 +13,11 @@ import (
 type Runtime interface {
 	Ping() error
 	Pull(image string) error
-	StartContainer(ID string) error
+	StartContainer(id string) error
+	StopContainer(id string) error
 	CreateContainer(opts client.ContainerCreateOptions) (string, error)
 	CloseRuntime() error
+	Inspect(id string) (client.ContainerInspectResult, error) // TODO: want a generic return value here
 }
 
 type DockerRuntime struct {
@@ -38,7 +40,6 @@ func NewDockerRuntime() (*DockerRuntime, error) {
 func (d *DockerRuntime) CloseRuntime() error {
 	err := d.client.Close()
 	if err != nil {
-		slog.Error("Failed to close connection")
 		return err
 	}
 	return nil
@@ -48,7 +49,6 @@ func (d *DockerRuntime) Ping() error {
 	opts := client.PingOptions{}
 	resp, err := d.client.Ping(d.ctx, opts)
 	if err != nil {
-		slog.Error("Failed to ping Docker")
 		return err
 	}
 	slog.Info("Successfully pinged Docker", "response", resp)
@@ -94,35 +94,44 @@ func (d *DockerRuntime) CreateContainer(opts client.ContainerCreateOptions) (str
 	return res.ID, nil
 }
 
-func (d *DockerRuntime) RemoveContainer(ID string) error {
+func (d *DockerRuntime) RemoveContainer(id string) error {
 	opts := client.ContainerRemoveOptions{}
-	_, err := d.client.ContainerRemove(d.ctx, ID, opts)
+	_, err := d.client.ContainerRemove(d.ctx, id, opts)
 	if err != nil {
 		slog.Error("Failed to remove container: ", "error", err)
 		return err
 	}
-	slog.Info("Removed container: ", "id", ID)
+	slog.Info("Removed container: ", "id", id)
 	return nil
 }
 
-func (d *DockerRuntime) StartContainer(ID string) error {
+func (d *DockerRuntime) StartContainer(id string) error {
 	opts := client.ContainerStartOptions{}
-	_, err := d.client.ContainerStart(d.ctx, ID, opts)
+	_, err := d.client.ContainerStart(d.ctx, id, opts)
 	if err != nil {
-		slog.Error("Failed to start container: ", "id", ID) //TODO: probably want ID, name, etc here later
+		slog.Error("Failed to start container: ", "id", id) //TODO: probably want ID, name, etc here later
 		return err
 	}
-	slog.Info("Started ", "container", ID)
+	slog.Info("Started ", "container", id)
 	return nil
 }
 
-func (d *DockerRuntime) StopContainer(ID string) error {
+func (d *DockerRuntime) StopContainer(id string) error {
 	opts := client.ContainerStopOptions{}
-	_, err := d.client.ContainerStop(d.ctx, ID, opts)
+	_, err := d.client.ContainerStop(d.ctx, id, opts)
 	if err != nil {
-		slog.Error("Failed to stop container ", "id", ID)
+		slog.Error("Failed to stop container ", "id", id)
 		return err
 	}
-	slog.Info("Stopped", "id", ID)
+	slog.Info("Stopped", "id", id)
 	return nil
+}
+
+func (d *DockerRuntime) Inspect(id string) (client.ContainerInspectResult, error){
+	opts := client.ContainerInspectOptions{}
+	res, err := d.client.ContainerInspect(d.ctx, id, opts) 
+	if err != nil {
+		return client.ContainerInspectResult{}, err
+	}
+	return res, nil
 }
