@@ -14,7 +14,7 @@
 		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [8080],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "java -version",
 	// Configure tool-specific properties.

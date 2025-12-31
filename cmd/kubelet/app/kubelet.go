@@ -9,8 +9,8 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"superminikube/kubelet"
-	"superminikube/kubelet/runtime"
+	"superminikube/pkg/kubelet"
+	"superminikube/pkg/kubelet/runtime"
 )
 
 func NewRootCommand() *cobra.Command {

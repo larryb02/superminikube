@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"superminikube/spec"
+	"superminikube/pkg/spec"
 )
 
 type PodState int

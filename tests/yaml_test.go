@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"superminikube/spec"
+	"superminikube/pkg/spec"
 )
 
 func TestContainerSpecDecode(t *testing.T) {

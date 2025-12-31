@@ -6,8 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"superminikube/kubelet/runtime"
-	"superminikube/types/pod"
+	"superminikube/pkg/kubelet/runtime"
+	"superminikube/pkg/types/pod"
 )
 
 type Kubelet struct {

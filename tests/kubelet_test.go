@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"superminikube/kubelet"
+	"superminikube/pkg/kubelet"
 
 	"github.com/moby/moby/client"
 )
