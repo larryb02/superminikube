@@ -11,7 +11,6 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"gopkg.in/yaml.v3"
-	"superminikube/logger"
 )
 
 // TODO: make Spec an interface that implements Decode
@@ -41,7 +40,7 @@ func (cs *ContainerSpec) Validate() error {
 func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	// Convert ContainerSpec to client.CreateContainerOptions
 	if err := cs.Validate(); err != nil {
-		logger.Logger.Error("Failed to decode spec: ", "msg", err)
+		slog.Error("Failed to decode spec: ", "msg", err)
 		return client.ContainerCreateOptions{}, err
 	}
 	var env []string
@@ -73,7 +72,7 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 		},
 		HostConfig: &container.HostConfig{
 			PortBindings: portMap,
-			AutoRemove:   true,
+			// AutoRemove:   true,
 		},
 	}
 	return opts, nil
@@ -101,4 +100,3 @@ func CreateSpec(specfile string) (*Spec, error) {
 	// return containerOpts, nil
 	return &spec, nil
 }
-
