@@ -10,53 +10,6 @@ import (
 	"superminikube/pkg/types/pod"
 )
 
-type Kubelet struct {
-	runtime runtime.Runtime
-	pods    map[uuid.UUID]*pod.Pod
-	ctx     context.Context
-}
-
-func NewKubelet(rt runtime.Runtime, ctx context.Context) (*Kubelet, error) {
-	// sanity check
-	err := rt.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("Kubelet failed to start: %v", err)
-	}
-	return &Kubelet{
-		runtime: rt,
-		pods:    map[uuid.UUID]*pod.Pod{},
-		ctx:     ctx,
-	}, nil
-}
-
-// func (k *Kubelet) Apply(specfile string) error {
-// 	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
-// 	// Load spec file
-// 	specs, err := spec.CreateSpec(specfile)
-// 	if err != nil {
-// 		return fmt.Errorf("kubelet: %v", err)
-// 	}
-// 	var g errgroup.Group
-// 	var mu sync.Mutex
-// 	for _, spec := range specs.ContainerSpec {
-// 		g.Go(func() error {
-// 			pod, err := pod.NewPod(&spec)
-// 			if err != nil {
-// 				return fmt.Errorf("kubelet: %v", err)
-// 			}
-// 			err = k.LaunchPod(pod)
-// 			if err != nil {
-// 				return fmt.Errorf("kubelet: %v", err)
-// 			}
-// 			mu.Lock()
-// 			k.pods[pod.UID] = pod
-// 			mu.Unlock()
-// 			return nil
-// 		})
-// 	}
-// 	return g.Wait()
-// }
-
 func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	err := k.runtime.Pull(p.ContainerSpec.Image)
 	if err != nil {
@@ -101,3 +54,50 @@ func (k *Kubelet) Cleanup() []error {
 	slog.Debug("containers stopped", "containers", stoppedContainers)
 	return errs
 }
+
+func NewKubelet(rt runtime.Runtime, ctx context.Context) (*Kubelet, error) {
+	// sanity check
+	err := rt.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("Kubelet failed to start: %v", err)
+	}
+	return &Kubelet{
+		runtime: rt,
+		pods:    map[uuid.UUID]*pod.Pod{},
+		ctx:     ctx,
+	}, nil
+}
+
+type Kubelet struct {
+	runtime runtime.Runtime
+	pods    map[uuid.UUID]*pod.Pod
+	ctx     context.Context
+}
+
+// func (k *Kubelet) Apply(specfile string) error {
+// 	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
+// 	// Load spec file
+// 	specs, err := spec.CreateSpec(specfile)
+// 	if err != nil {
+// 		return fmt.Errorf("kubelet: %v", err)
+// 	}
+// 	var g errgroup.Group
+// 	var mu sync.Mutex
+// 	for _, spec := range specs.ContainerSpec {
+// 		g.Go(func() error {
+// 			pod, err := pod.NewPod(&spec)
+// 			if err != nil {
+// 				return fmt.Errorf("kubelet: %v", err)
+// 			}
+// 			err = k.LaunchPod(pod)
+// 			if err != nil {
+// 				return fmt.Errorf("kubelet: %v", err)
+// 			}
+// 			mu.Lock()
+// 			k.pods[pod.UID] = pod
+// 			mu.Unlock()
+// 			return nil
+// 		})
+// 	}
+// 	return g.Wait()
+// }
