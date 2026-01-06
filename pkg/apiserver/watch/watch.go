@@ -44,7 +44,6 @@ func (ws *WatchService) Shutdown() {
 // will take chan as argument
 // Notify watch service of a mutation event
 func (ws *WatchService) Notify(ev store.StoreEvent) error {
-	defer ws.mu.Unlock()
 	key := fmt.Sprintf("%s/%s", ev.Resource, ev.Node)
 	slog.Debug("notifying watcher", "watcher", ws.watchers[key], "event", ev, "key", key)
 	ws.mu.Lock()
