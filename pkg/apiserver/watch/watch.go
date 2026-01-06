@@ -48,6 +48,7 @@ func (ws *WatchService) Notify(ev store.StoreEvent) error {
 	key := fmt.Sprintf("%s/%s", ev.Resource, ev.Node)
 	slog.Debug("notifying watcher", "watcher", ws.watchers[key], "event", ev, "key", key)
 	ws.mu.Lock()
+	defer ws.mu.Unlock()
 	_, ok := ws.watchers[key]
 	if !ok {
 		return fmt.Errorf("failed to notify key: %s not found", key)
