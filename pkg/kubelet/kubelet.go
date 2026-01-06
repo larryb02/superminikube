@@ -55,11 +55,20 @@ func (k *Kubelet) Cleanup() []error {
 	return errs
 }
 
-func NewKubelet(rt runtime.Runtime, ctx context.Context) (*Kubelet, error) {
-	// sanity check
-	err := rt.Ping()
+func (k *Kubelet) Start() error {
+	defer k.Cleanup()
+	err := k.runtime.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("Kubelet failed to start: %v", err)
+		return fmt.Errorf("Kubelet failed to start: %v", err)
+	}
+	<-k.ctx.Done()
+	return nil
+}
+
+func NewKubelet(ctx context.Context) (*Kubelet, error) {
+	rt, err := runtime.NewDockerRuntime()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kubelet: %v", err)
 	}
 	return &Kubelet{
 		runtime: rt,

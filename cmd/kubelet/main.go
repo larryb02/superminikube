@@ -10,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"superminikube/pkg/kubelet"
-	"superminikube/pkg/kubelet/runtime"
 )
 
 // TODO: Return error in Run
@@ -28,24 +27,20 @@ func NewAgentCommand() *cobra.Command {
 
 func Run() {
 	slog.Info("Starting Kubelet...")
-	slog.Debug("just a test")
 	ctx, stop := signal.NotifyContext(context.Background(),
 		os.Interrupt,
 		syscall.SIGTERM)
 	defer stop()
-	// TODO: create runtime inside agent
-	rt, err := runtime.NewDockerRuntime()
-	if err != nil {
-		slog.Error("Failed to start kubelet: ", "error", err)
-		os.Exit(1)
-	}
-	kubelet, err := kubelet.NewKubelet(rt, ctx)
+	k, err := kubelet.NewKubelet(ctx)
 	if err != nil {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
 	}
-	<-ctx.Done()
-	kubelet.Cleanup()
+	err = k.Start()
+	if err != nil {
+		slog.Error("Failed to start Kubelet:", "error", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
