@@ -5,8 +5,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/spf13/cobra"
 	"superminikube/pkg/apiserver"
+
+	"github.com/spf13/cobra"
 )
 
 func Run() {

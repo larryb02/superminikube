@@ -5,8 +5,6 @@ package store
 // store. A small in-memory implementation is provided for testing and local
 // development.
 
-import ()
-
 type StoreEvent struct {
 	Type     EventType // Created, Updated, Deleted
 	Resource string    // "pod"

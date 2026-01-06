@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
+
 	"superminikube/pkg/apiserver/store"
 	"superminikube/pkg/apiserver/watch"
-	"syscall"
 
 	"github.com/gorilla/mux"
 )
