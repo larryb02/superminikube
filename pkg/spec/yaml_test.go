@@ -1,4 +1,4 @@
-package tests
+package spec
 
 import (
 	"os"
@@ -6,16 +6,28 @@ import (
 	"reflect"
 	"testing"
 
-	"superminikube/pkg/spec"
+	// "superminikube/pkg/spec"
 )
 
 func TestContainerSpecDecode(t *testing.T) {
-	cs := spec.ContainerSpec{
+	// specs := []spec.ContainerSpec{
+	// 	{
+	// 		Image: "nginx",
+	// 		Env: map[string]string{
+	// 			"FOO": "bar",
+	// 		},
+	// 		Ports: []spec.Port{
+	// 			{Hostport: "8080", Containerport: "80"},
+	// 		},
+	// 		Volumes: []string{"data"},
+	// 	},
+	// }
+	cs := ContainerSpec{
 		Image: "nginx",
 		Env: map[string]string{
 			"FOO": "bar",
 		},
-		Ports: []spec.Port{
+		Ports: []Port{
 			{Hostport: "8080", Containerport: "80"},
 		},
 		Volumes: []string{"data"},
@@ -60,7 +72,7 @@ spec:
 		t.Fatalf("failed to write temp spec file: %v", err)
 	}
 
-	specObj, err := spec.CreateSpec(specFile)
+	specObj, err := CreateSpec(specFile)
 	if err != nil {
 		t.Fatalf("CreateSpec() error = %v", err)
 	}
