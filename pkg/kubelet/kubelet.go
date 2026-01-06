@@ -36,10 +36,6 @@ func (k *Kubelet) handlePodDelete(param any) {
 	panic("unimplemented")
 }
 
-func (k *Kubelet) handlePodUpdate(param any) {
-	panic("unimplemented")
-}
-
 func (k *Kubelet) handlePodAdd(param any) {
 	panic("unimplemented")
 }
