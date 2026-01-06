@@ -17,6 +17,7 @@ const (
 	PodTerminated
 )
 
+// TODO: Create container struct
 type Pod struct {
 	ContainerSpec *spec.ContainerSpec
 	CurrentState  PodState
@@ -33,6 +34,6 @@ func NewPod(spec *spec.ContainerSpec) (*Pod, error) {
 		ContainerSpec: spec,
 		CurrentState:  PodPending,
 		UID:           uuid,
-		ContainerId: "",
+		ContainerId:   "",
 	}, nil
 }

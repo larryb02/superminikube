@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"log/slog"
+	"os"
 
 	"github.com/spf13/cobra"
 	"superminikube/pkg/apiserver"

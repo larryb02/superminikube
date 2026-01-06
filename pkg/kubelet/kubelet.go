@@ -5,10 +5,44 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/google/uuid"
+	"superminikube/pkg/apiserver/store"
 	"superminikube/pkg/kubelet/runtime"
 	"superminikube/pkg/types/pod"
+
+	"github.com/google/uuid"
 )
+
+// Pod lifecycle sync loop
+// kubelet receives an event from control plane
+// event types:
+// create
+// delete
+func (k *Kubelet) syncLoop(events <-chan store.StoreEvent) {
+	// block until kubelet receives an event
+	// handle event based on type
+	for event := range events {
+		switch event.Type {
+		case store.EventSet:
+			k.handlePodAdd(event)
+		case store.EventDelete:
+			k.handlePodDelete(event)
+		default:
+			slog.Error("Unknown event type")
+		}
+	}
+}
+
+func (k *Kubelet) handlePodDelete(param any) {
+	panic("unimplemented")
+}
+
+func (k *Kubelet) handlePodUpdate(param any) {
+	panic("unimplemented")
+}
+
+func (k *Kubelet) handlePodAdd(param any) {
+	panic("unimplemented")
+}
 
 func (k *Kubelet) LaunchPod(p *pod.Pod) error {
 	err := k.runtime.Pull(p.ContainerSpec.Image)
@@ -40,6 +74,7 @@ func (k *Kubelet) GetPods() (map[uuid.UUID]*pod.Pod, error) {
 // Cleanup Kubelet if process killed/stopped
 // stops and removes containers running in pods
 func (k *Kubelet) Cleanup() []error {
+	slog.Info("cleaning up")
 	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
 	errs := make([]error, 0)
 	for _, p := range k.pods {

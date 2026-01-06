@@ -127,9 +127,9 @@ func (d *DockerRuntime) StopContainer(id string) error {
 	return nil
 }
 
-func (d *DockerRuntime) Inspect(id string) (client.ContainerInspectResult, error){
+func (d *DockerRuntime) Inspect(id string) (client.ContainerInspectResult, error) {
 	opts := client.ContainerInspectOptions{}
-	res, err := d.client.ContainerInspect(d.ctx, id, opts) 
+	res, err := d.client.ContainerInspect(d.ctx, id, opts)
 	if err != nil {
 		return client.ContainerInspectResult{}, err
 	}
