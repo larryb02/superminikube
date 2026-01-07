@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"superminikube/pkg/apiserver/store"
 	"superminikube/pkg/apiserver/watch"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 )
 
@@ -69,26 +69,21 @@ func Start() error {
 }
 
 func NewAPIServer() (*APIServer, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	kvstore, err := store.NewRedisStore()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
+	ctx, cancel := context.WithCancel(context.Background()) // should probably get context from entry point
 	return &APIServer{
-		ctx:          ctx,
-		cancel:       cancel,
-		kvstore:      kvstore,
+		ctx:    ctx,
+		cancel: cancel,
+		redisClient: redis.NewClient(&redis.Options{
+			Addr: "host.docker.internal:6379", // TODO: make configurable, got so many options to worry about now
+		}),
 		watchService: watch.New(ctx),
 	}, nil
 }
 
 type APIServer struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	server *http.Server
-	// TODO: kvstore should not belong to APIServer directly, belongs to a separate service
-	// BUT maybe it doesn't need service level separation
-	kvstore      store.Store // just a client to a kvstore interface -- probably redis
+	ctx          context.Context
+	cancel       context.CancelFunc
+	server       *http.Server
+	redisClient  *redis.Client
 	watchService *watch.WatchService
 }
