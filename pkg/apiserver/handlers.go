@@ -22,7 +22,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		uid := r.URL.Query().Get("uid")
 		if uid != "" {
 			// TODO: custom errors for potential cases (key not found or internal error)
-			pod, err := GetPodByUid(nodename, uid, s.kvstore)
+			pod, err := GetPodByUid(nodename, uid, s.redisClient)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -30,7 +30,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(pod)
 		} else {
-			pods, err := ListAllNamespacePods(s.kvstore)
+			pods, err := ListAllNamespacePods(s.redisClient)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -57,7 +57,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 			&spec.ContainerSpec{
 				Image: "nginx",
 			},
-			s.kvstore,
+			s.redisClient,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
