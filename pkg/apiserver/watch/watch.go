@@ -41,7 +41,7 @@ func (ws *WatchService) Shutdown() {
 	}
 }
 
-// TODO: Move notify outside of this package, belongs in store
+// TODO: Move notify outside of this package, most likely belongs elsewhere
 // will take chan as argument
 // Notify watch service of a mutation event
 func (ws *WatchService) Notify(ev store.StoreEvent) error {
