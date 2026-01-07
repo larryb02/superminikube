@@ -50,11 +50,12 @@ func Start() error {
 	// and 'add' them all to this route
 	// may also want a root route like /api
 	r := mux.NewRouter()
+	api := r.PathPrefix("/api/v1").Subrouter()
 	r.Use(loggingMiddleware)
-	r.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}")
-	r.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}", "uid", "{uid}")
+	api.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}")
+	api.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}", "uid", "{uid}")
 	// post is probably the better verb here
-	r.HandleFunc("/watch", s.watchService.WatchHandler).Methods(http.MethodGet) // eventually will be watching per node
+	api.HandleFunc("/watch", s.watchService.WatchHandler).Methods(http.MethodGet) // eventually will be watching per node
 	// TODO: will eventually initialize server inside NewAPIServer()
 	s.server = &http.Server{
 		Addr:    ":8080",
