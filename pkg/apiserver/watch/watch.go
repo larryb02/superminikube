@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-
-	"superminikube/pkg/apiserver/store"
 )
 
-func (ws *WatchService) Get(key string) (chan store.StoreEvent, error) {
+func (ws *WatchService) Get(key string) (chan WatchEvent, error) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	val, ok := ws.watchers[key]
@@ -19,7 +17,7 @@ func (ws *WatchService) Get(key string) (chan store.StoreEvent, error) {
 	return val, nil
 }
 
-func (ws *WatchService) Set(key string, value chan store.StoreEvent) error {
+func (ws *WatchService) Set(key string, value chan WatchEvent) error {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	if key == "" {
@@ -44,7 +42,7 @@ func (ws *WatchService) Shutdown() {
 // TODO: Move notify outside of this package, most likely belongs elsewhere
 // will take chan as argument
 // Notify watch service of a mutation event
-func (ws *WatchService) Notify(ev store.StoreEvent) error {
+func (ws *WatchService) Notify(ev WatchEvent) error {
 	key := fmt.Sprintf("%s/%s", ev.Resource, ev.Node)
 	slog.Debug("notifying watcher", "watcher", ws.watchers[key], "event", ev, "key", key)
 	ws.mu.Lock()
@@ -84,10 +82,10 @@ func (ws *WatchService) Notify(ev store.StoreEvent) error {
 // 	return out
 // }
 
-func (ws *WatchService) Watch(key string) <-chan store.StoreEvent {
+func (ws *WatchService) Watch(key string) <-chan WatchEvent {
 	// make a channel for the key add it to map of channels
 	// TODO: Avoid making duplicate channels
-	ev := make(chan store.StoreEvent)
+	ev := make(chan WatchEvent)
 	err := ws.Set(key, ev)
 	if err != nil {
 		// TODO: return error
@@ -106,7 +104,21 @@ func New(parentCtx context.Context) *WatchService {
 	}
 }
 
-type Watchers map[string]chan store.StoreEvent
+type WatchEvent struct {
+	EventType Event
+	// these fields are tentative
+	Resource string
+	Node     string
+}
+
+// TODO: Add events type here
+const (
+	Add Event = iota
+	Delete
+)
+
+type Event int
+type Watchers map[string]chan WatchEvent
 type WatchService struct {
 	watchers Watchers
 	ctx      context.Context

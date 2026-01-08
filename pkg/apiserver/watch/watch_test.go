@@ -6,8 +6,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"superminikube/pkg/apiserver/store"
 )
 
 // hmm probably won't test this
@@ -19,7 +17,7 @@ import (
 // }
 
 func TestGet(t *testing.T) {
-	ch := make(chan store.StoreEvent)
+	ch := make(chan WatchEvent)
 	ws := WatchService{
 		watchers: Watchers{
 			"test": ch,
@@ -27,7 +25,7 @@ func TestGet(t *testing.T) {
 	}
 	testCases := []struct {
 		key      string
-		expected chan store.StoreEvent
+		expected chan WatchEvent
 		wantErr  bool
 	}{
 		{"test", ch, false},        // existing key
@@ -52,11 +50,11 @@ func TestSet(t *testing.T) {
 	ws := New(ctx)
 	testCases := []struct {
 		key     string
-		value   chan store.StoreEvent
+		value   chan WatchEvent
 		wantErr bool
 	}{
 		{"test", nil, false},
-		{"", make(chan store.StoreEvent), true},
+		{"", make(chan WatchEvent), true},
 	}
 	for _, tc := range testCases {
 		err := ws.Set(tc.key, tc.value)
@@ -80,7 +78,7 @@ func TestSetGetConcurrently(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < numOpsPerGoroutine; i++ {
 				key := fmt.Sprintf("key-%d-%d", g, i)
-				ch := make(chan store.StoreEvent)
+				ch := make(chan WatchEvent)
 				if err := ws.Set(key, ch); err != nil {
 					t.Errorf("Set(%q) failed: %v", key, err)
 				}
@@ -102,9 +100,9 @@ func TestNotify(t *testing.T) {
 	testCases := []struct {
 		name     string
 		setup    func(*WatchService) string
-		event    store.StoreEvent
+		event    WatchEvent
 		wantErr  bool
-		validate func(*testing.T, chan store.StoreEvent, store.StoreEvent)
+		validate func(*testing.T, chan WatchEvent, WatchEvent)
 	}{
 		{
 			name: "successful notification",
@@ -113,16 +111,16 @@ func TestNotify(t *testing.T) {
 				ws.Watch(key)
 				return key
 			},
-			event: store.StoreEvent{
+			event: WatchEvent{
 				Resource: "pod",
 				Node:     "test-node",
-				Type:     store.EventSet,
+				EventType:     Add,
 			},
 			wantErr: false,
-			validate: func(t *testing.T, ch chan store.StoreEvent, expected store.StoreEvent) {
+			validate: func(t *testing.T, ch chan WatchEvent, expected WatchEvent) {
 				select {
 				case received := <-ch:
-					if received.Resource != expected.Resource || received.Node != expected.Node || received.Type != expected.Type {
+					if received.Resource != expected.Resource || received.Node != expected.Node || received.EventType != expected.EventType {
 						t.Errorf("received event %+v, expected %+v", received, expected)
 					}
 				case <-time.After(100 * time.Millisecond):
@@ -135,10 +133,10 @@ func TestNotify(t *testing.T) {
 			setup: func(ws *WatchService) string {
 				return "pod/nonexistent"
 			},
-			event: store.StoreEvent{
+			event: WatchEvent{
 				Resource: "pod",
 				Node:     "nonexistent",
-				Type:     store.EventSet,
+				EventType:     Add,
 			},
 			wantErr:  true,
 			validate: nil,
@@ -205,7 +203,7 @@ func TestShutdown(t *testing.T) {
 			ctx := context.Background()
 			ws := New(ctx)
 
-			channels := make([]<-chan store.StoreEvent, 0, len(tc.watcherKeys))
+			channels := make([]<-chan WatchEvent, 0, len(tc.watcherKeys))
 			for _, key := range tc.watcherKeys {
 				ch := ws.Watch(key)
 				channels = append(channels, ch)

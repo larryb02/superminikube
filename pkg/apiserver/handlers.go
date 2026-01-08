@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"superminikube/pkg/apiserver/store"
+	"superminikube/pkg/apiserver/watch"
 	"superminikube/pkg/spec"
 )
 
@@ -43,8 +43,8 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		// this is bad coupling in my opinion
 		// also 'what if' this method gets called while no watcher assigned to endpoint what happens then?
 		// SHOULDNT happen but should prepared
-		err := s.watchService.Notify(store.StoreEvent{
-			Type:     store.EventSet,
+		err := s.watchService.Notify(watch.WatchEvent{
+			EventType:     watch.Add,
 			Resource: "pod",
 			Node:     nodename,
 		})

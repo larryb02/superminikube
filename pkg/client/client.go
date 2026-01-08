@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"superminikube/pkg/apiserver/store"
+	"superminikube/pkg/apiserver/watch"
 )
 
 // Client provides an interface for interacting with the API server
@@ -16,7 +16,7 @@ type Client interface {
 	Update(ctx context.Context, resource string, id uuid.UUID, data []byte) error
 
 	// Watch for events from the control plane
-	Watch(ctx context.Context) (<-chan store.StoreEvent, error)
+	Watch(ctx context.Context) (<-chan watch.WatchEvent, error)
 
 	// Health check
 	Ping(ctx context.Context) error

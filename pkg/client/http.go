@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"superminikube/pkg/apiserver/watch"
 
-	"superminikube/pkg/apiserver/store"
+	"github.com/google/uuid"
 )
 
 type HTTPClient struct {
@@ -103,8 +103,8 @@ func (c *HTTPClient) Update(ctx context.Context, resource string, id uuid.UUID, 
 	return nil
 }
 
-func (c *HTTPClient) Watch(ctx context.Context) (<-chan store.StoreEvent, error) {
-	eventChan := make(chan store.StoreEvent)
+func (c *HTTPClient) Watch(ctx context.Context) (<-chan watch.WatchEvent, error) {
+	eventChan := make(chan watch.WatchEvent)
 
 	go func() {
 		const maxRetries = 3
@@ -137,30 +137,30 @@ func (c *HTTPClient) Watch(ctx context.Context) (<-chan store.StoreEvent, error)
 	return eventChan, nil
 }
 
-func parseStream(line string) (store.StoreEvent, error) {
+func parseStream(line string) (watch.WatchEvent, error) {
 	// Ignore comments/keepalives
 	if strings.HasPrefix(line, ":") {
-		return store.StoreEvent{}, fmt.Errorf("keepalive")
+		return watch.WatchEvent{}, fmt.Errorf("keepalive")
 	}
 
 	if line == "" {
-		return store.StoreEvent{}, fmt.Errorf("empty line")
+		return watch.WatchEvent{}, fmt.Errorf("empty line")
 	}
 
 	if strings.HasPrefix(line, "data: ") {
 		data := strings.TrimPrefix(line, "data: ")
-		var event store.StoreEvent
+		var event watch.WatchEvent
 		err := json.Unmarshal([]byte(data), &event)
 		if err != nil {
-			return store.StoreEvent{}, err
+			return watch.WatchEvent{}, err
 		}
 		return event, nil
 	}
 
-	return store.StoreEvent{}, fmt.Errorf("unknown line format")
+	return watch.WatchEvent{}, fmt.Errorf("unknown line format")
 }
 
-func (c *HTTPClient) watchStream(ctx context.Context, eventChan chan<- store.StoreEvent) error {
+func (c *HTTPClient) watchStream(ctx context.Context, eventChan chan<- watch.WatchEvent) error {
 	url := fmt.Sprintf("%s/api/v1/watch?nodename=%s", c.baseURL, c.nodeName)
 	slog.Debug(fmt.Sprintf("making request to %s", url))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

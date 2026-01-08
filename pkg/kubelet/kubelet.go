@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"log/slog"
 
-	"superminikube/pkg/apiserver/store"
-	"superminikube/pkg/kubelet/runtime"
-	"superminikube/pkg/types/pod"
-
 	"github.com/google/uuid"
+
+	"superminikube/pkg/apiserver/watch"
+	"superminikube/pkg/client"
+	"superminikube/pkg/kubelet/runtime"
+	"superminikube/pkg/spec"
+	"superminikube/pkg/types/pod"
 )
 
+func (k *Kubelet) reconcilePod(event watch.WatchEvent) {}
+// TODO: move this to PodManager service
 // Pod lifecycle sync loop
 // kubelet receives an event from control plane
 // event types:
 // create
 // delete
-func (k *Kubelet) syncLoop(events <-chan store.StoreEvent) {
+func (k *Kubelet) syncLoop(events <-chan watch.WatchEvent) {
 	// block until kubelet receives an event
 	// handle event based on type
 	for event := range events {
