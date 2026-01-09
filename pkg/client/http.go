@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"superminikube/pkg/apiserver/watch"
-
 	"github.com/google/uuid"
+
+	"superminikube/pkg/apiserver/watch"
 )
 
 type HTTPClient struct {
@@ -197,7 +197,6 @@ func (c *HTTPClient) watchStream(ctx context.Context, eventChan chan<- watch.Wat
 				slog.Debug("nothing to do.")
 				continue
 			}
-			slog.Debug("doing something")
 			eventChan <- parsedEvent
 		}
 	}
