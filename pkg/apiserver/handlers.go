@@ -48,7 +48,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 			s.redisClient,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to process request", http.StatusInternalServerError)
 			return
 		}
 		// TODO: s.watchService.Notify only works because PodHandler is currently of type APIServer,
