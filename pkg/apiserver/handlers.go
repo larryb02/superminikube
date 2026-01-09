@@ -42,8 +42,10 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		pod, err := CreatePod(
 			r.Context(),
 			nodename,
-			&api.ContainerSpec{
-				Image: "nginx",
+			api.PodSpec{
+				Container: api.Container{
+					Image: "nginx",
+				},
 			},
 			s.redisClient,
 		)

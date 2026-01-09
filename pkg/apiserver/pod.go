@@ -41,14 +41,14 @@ func GetPodByUid(ctx context.Context, nodename string, uid string, kvstore *redi
 }
 
 // NOTE: Return type could be of type CreatePodResponse in the future
-func CreatePod(ctx context.Context, nodename string, spec *api.ContainerSpec, kvstore *redis.Client) (api.Pod, error) {
+func CreatePod(ctx context.Context, nodename string, spec api.PodSpec, kvstore *redis.Client) (api.Pod, error) {
 	// takes a decoded spec and creates a Pod object to store in-memory
 	var buf bytes.Buffer
 	// TODO: make sure uuid is unique
 	pod := api.Pod{
 		Uid: uuid.New(),
 		Nodename: nodename,
-		ContainerSpec: spec,
+		Spec: spec,
 	}
 	// TODO: shouldn't be encoding in this function
 	encoder := gob.NewEncoder(&buf)

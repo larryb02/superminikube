@@ -7,26 +7,29 @@ import (
 
 	"github.com/go-redis/redis/v8"
 )
+
 // TODO: prefill test client with some data
 var testClient = redis.NewClient(&redis.Options{
 	Addr: "host.docker.internal:6379",
-},)
+})
 
 func TestCreatePod(t *testing.T) {
 	testCases := []struct {
 		name        string
 		nodename    string
-		spec        *api.ContainerSpec
+		spec        api.PodSpec
 		client      *redis.Client
 		expectError bool
 	}{
 		{
 			name:     "create pod with basic spec",
 			nodename: "test-node-1",
-			spec: &api.ContainerSpec{
-				Image: "nginx:latest",
-				Env: map[string]string{
-					"ENV_VAR": "test-value",
+			spec: api.PodSpec{
+				Container: api.Container{
+					Image: "nginx:latest",
+					Env: map[string]string{
+						"ENV_VAR": "test-value",
+					},
 				},
 			},
 			client:      testClient,
@@ -35,8 +38,10 @@ func TestCreatePod(t *testing.T) {
 		{
 			name:     "create pod with empty nodename",
 			nodename: "",
-			spec: &api.ContainerSpec{
-				Image: "alpine:latest",
+			spec: api.PodSpec{
+				Container: api.Container{
+					Image: "alpine:latest",
+				},
 			},
 			client:      testClient,
 			expectError: false,
@@ -44,18 +49,20 @@ func TestCreatePod(t *testing.T) {
 		{
 			name:     "create pod with ports and volumes",
 			nodename: "test-node-2",
-			spec: &api.ContainerSpec{
-				Image: "redis:latest",
-				Env: map[string]string{
-					"REDIS_PORT": "6379",
-				},
-				Ports: []api.Port{
-					{
-						Hostport:      "8080",
-						Containerport: "80",
+			spec: api.PodSpec{
+				Container: api.Container{
+					Image: "redis:latest",
+					Env: map[string]string{
+						"REDIS_PORT": "6379",
 					},
+					Ports: []api.Port{
+						{
+							Hostport:      "8080",
+							Containerport: "80",
+						},
+					},
+					Volumes: []string{"/data"},
 				},
-				Volumes: []string{"/data"},
 			},
 			client:      testClient,
 			expectError: false,

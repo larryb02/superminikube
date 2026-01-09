@@ -19,13 +19,13 @@ func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:
 		slog.Info("creating pod with spec... on node...") // contexts that i plan to add
-		cid, err := k.handlePodCreate(*event.Pod.ContainerSpec)
+		cid, err := k.handlePodCreate(event.Pod.Spec)
 		if err != nil {
 			slog.Error("failed to create pod", "err", err)
 			return
 		}
 		// TODO: figure out where i actually want to update the map
-		event.Pod.Container.ContainerId = cid
+		event.Pod.Spec.Container.ContainerId = cid
 		k.pods[event.Pod.Uid] = event.Pod
 	case watch.Delete:
 		break
@@ -55,7 +55,8 @@ func (k *Kubelet) handlePodDelete(param any) {
 	panic("unimplemented")
 }
 
-func (k *Kubelet) handlePodCreate(spec api.ContainerSpec) (string, error) {
+// Creates container then returns container id
+func (k *Kubelet) handlePodCreate(spec api.PodSpec) (string, error) {
 	slog.Info("Creating pods with spec", "spec", spec)
 	// pull image
 	// get container opts
@@ -63,7 +64,7 @@ func (k *Kubelet) handlePodCreate(spec api.ContainerSpec) (string, error) {
 	// start container
 	// set status
 	// create pod, then store in map
-	err := k.runtime.Pull(spec.Image)
+	err := k.runtime.Pull(spec.Container.Image)
 	if err != nil {
 		return "", fmt.Errorf("failed to launch pod: %v", err)
 	}
@@ -89,13 +90,13 @@ func (k *Kubelet) Cleanup() []error {
 	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
 	errs := make([]error, 0)
 	for _, p := range k.pods {
-		err := k.runtime.StopContainer(p.Container.ContainerId)
+		err := k.runtime.StopContainer(p.Spec.Container.ContainerId)
 		if err != nil {
-			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.Container.ContainerId, err)
+			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.Spec.Container.ContainerId, err)
 			errs = append(errs, err)
 			continue
 		}
-		stoppedContainers = append(stoppedContainers, p.Container.ContainerId) // probably better if you list the containers that FAILED
+		stoppedContainers = append(stoppedContainers, p.Spec.Container.ContainerId) // probably better if you list the containers that FAILED
 	}
 	slog.Debug("containers stopped", "containers", stoppedContainers)
 	return errs
