@@ -7,31 +7,45 @@ import (
 
 	"github.com/google/uuid"
 
+	"superminikube/pkg/api"
 	"superminikube/pkg/apiserver/watch"
 	"superminikube/pkg/client"
 	"superminikube/pkg/kubelet/runtime"
-	"superminikube/pkg/spec"
-	"superminikube/pkg/types/pod"
+	yaml "superminikube/pkg/spec" // TODO: another bandaid fix until i finish cleaning up
 )
 
-func (k *Kubelet) reconcilePod(event watch.WatchEvent) {}
+func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
+	switch event.EventType {
+	case watch.Add:
+		slog.Info("creating pod with spec... on node...") // contexts that i plan to add
+		cid, err := k.handlePodCreate(*event.Pod.ContainerSpec)
+		if err != nil {
+			slog.Error("failed to create pod", "err", err)
+			return
+		}
+		// TODO: figure out where i actually want to update the map
+		event.Pod.Container.ContainerId = cid
+		k.pods[event.Pod.Uid] = &event.Pod
+	case watch.Delete:
+		break
+	default:
+		slog.Error("Unknown event type")
+	}
+}
+
 // TODO: move this to PodManager service
 // Pod lifecycle sync loop
-// kubelet receives an event from control plane
-// event types:
-// create
-// delete
 func (k *Kubelet) syncLoop(events <-chan watch.WatchEvent) {
 	// block until kubelet receives an event
 	// handle event based on type
-	for event := range events {
-		switch event.Type {
-		case store.EventSet:
-			k.handlePodAdd(event)
-		case store.EventDelete:
-			k.handlePodDelete(event)
-		default:
-			slog.Error("Unknown event type")
+	for {
+		select {
+		case <-k.ctx.Done():
+			slog.Info("syncLoop stopped due to context cancellation")
+			return
+		case event := <-events:
+			slog.Debug("Got event", "event", event)
+			k.reconcilePod(event)
 		}
 	}
 }
@@ -40,35 +54,31 @@ func (k *Kubelet) handlePodDelete(param any) {
 	panic("unimplemented")
 }
 
-func (k *Kubelet) handlePodAdd(param any) {
-	panic("unimplemented")
-}
-
-func (k *Kubelet) LaunchPod(p *pod.Pod) error {
-	err := k.runtime.Pull(p.ContainerSpec.Image)
+func (k *Kubelet) handlePodCreate(spec api.ContainerSpec) (string, error) {
+	slog.Info("Creating pods with spec", "spec", spec)
+	// pull image
+	// get container opts
+	// create container
+	// start container
+	// set status
+	// create pod, then store in map
+	err := k.runtime.Pull(spec.Image)
 	if err != nil {
-		return fmt.Errorf("failed to launch pod: %v", err)
+		return "", fmt.Errorf("failed to launch pod: %v", err)
 	}
-	containerOpts, err := p.ContainerSpec.Decode()
+	containerOpts, err := yaml.Decode(&spec)
 	if err != nil {
-		return fmt.Errorf("failed to launch pod: %v", err)
+		return "", fmt.Errorf("failed to launch pod: %v", err)
 	}
 	containerId, err := k.runtime.CreateContainer(containerOpts)
 	if err != nil {
-		return fmt.Errorf("failed to launch pod: %v", err)
+		return "", fmt.Errorf("failed to launch pod: %v", err)
 	}
 	err = k.runtime.StartContainer(containerId)
 	if err != nil {
-		return fmt.Errorf("failed to launch pod: %v", err)
+		return "", fmt.Errorf("failed to launch pod: %v", err)
 	}
-	p.ContainerId = containerId
-	p.CurrentState = pod.PodRunning
-	return nil
-}
-
-// TODO: Remove
-func (k *Kubelet) GetPods() (map[uuid.UUID]*pod.Pod, error) {
-	return k.pods, nil // TODO: return a deep copy
+	return containerId, nil
 }
 
 // Cleanup Kubelet if process killed/stopped
@@ -96,52 +106,36 @@ func (k *Kubelet) Start() error {
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to start: %v", err)
 	}
+
+	events, err := k.client.Watch(k.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to watch events: %v", err)
+	}
+
+	go k.syncLoop(events)
+
 	<-k.ctx.Done()
 	return nil
 }
 
-func NewKubelet(ctx context.Context) (*Kubelet, error) {
+func NewKubelet(ctx context.Context, apiServerURL, nodeName string) (*Kubelet, error) {
 	rt, err := runtime.NewDockerRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubelet: %v", err)
 	}
 	return &Kubelet{
-		runtime: rt,
-		pods:    map[uuid.UUID]*pod.Pod{},
-		ctx:     ctx,
+		client:   client,
+		runtime:  rt,
+		pods:     map[uuid.UUID]*api.Pod{},
+		ctx:      ctx,
+		nodeName: nodeName,
 	}, nil
 }
 
 type Kubelet struct {
-	runtime runtime.Runtime
-	pods    map[uuid.UUID]*pod.Pod
-	ctx     context.Context
+	client   client.Client // TODO: may come up with better naming convention later
+	runtime  runtime.Runtime
+	pods     map[uuid.UUID]*api.Pod
+	ctx      context.Context
+	nodeName string
 }
-
-// func (k *Kubelet) Apply(specfile string) error {
-// 	// for now we're still just loading a specfile, but now we're creating Pods instead of individual containers
-// 	// Load spec file
-// 	specs, err := spec.CreateSpec(specfile)
-// 	if err != nil {
-// 		return fmt.Errorf("kubelet: %v", err)
-// 	}
-// 	var g errgroup.Group
-// 	var mu sync.Mutex
-// 	for _, spec := range specs.ContainerSpec {
-// 		g.Go(func() error {
-// 			pod, err := pod.NewPod(&spec)
-// 			if err != nil {
-// 				return fmt.Errorf("kubelet: %v", err)
-// 			}
-// 			err = k.LaunchPod(pod)
-// 			if err != nil {
-// 				return fmt.Errorf("kubelet: %v", err)
-// 			}
-// 			mu.Lock()
-// 			k.pods[pod.UID] = pod
-// 			mu.Unlock()
-// 			return nil
-// 		})
-// 	}
-// 	return g.Wait()
-// }
