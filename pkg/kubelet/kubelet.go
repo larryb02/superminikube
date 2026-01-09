@@ -88,13 +88,13 @@ func (k *Kubelet) Cleanup() []error {
 	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
 	errs := make([]error, 0)
 	for _, p := range k.pods {
-		err := k.runtime.StopContainer(p.ContainerId)
+		err := k.runtime.StopContainer(p.Container.ContainerId)
 		if err != nil {
-			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.ContainerId, err)
+			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.Container.ContainerId, err)
 			errs = append(errs, err)
 			continue
 		}
-		stoppedContainers = append(stoppedContainers, p.ContainerId) // probably better if you list the containers that FAILED
+		stoppedContainers = append(stoppedContainers, p.Container.ContainerId) // probably better if you list the containers that FAILED
 	}
 	slog.Debug("containers stopped", "containers", stoppedContainers)
 	return errs
@@ -123,6 +123,7 @@ func NewKubelet(ctx context.Context, apiServerURL, nodeName string) (*Kubelet, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubelet: %v", err)
 	}
+	client := client.NewHTTPClient(apiServerURL, nodeName)
 	return &Kubelet{
 		client:   client,
 		runtime:  rt,
