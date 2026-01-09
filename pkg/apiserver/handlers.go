@@ -57,10 +57,10 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		// SHOULDNT happen but should prepared
 		// this should also just get called inside the CreatePod function doesn't belong out here
 		err = s.watchService.Notify(watch.WatchEvent{
-			EventType:     watch.Add,
-			Resource: "pod",
-			Node:     nodename,
-			Pod: pod,
+			EventType: watch.Add,
+			Resource:  "pod",
+			Node:      nodename,
+			Pod:       pod,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
