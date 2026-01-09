@@ -32,7 +32,10 @@ func Run() {
 		os.Interrupt,
 		syscall.SIGTERM)
 	defer stop()
-	k, err := kubelet.NewKubelet(ctx)
+	// TODO: more things that need to be configured
+	// how do i plan on generating nodenames
+	// maybe i should verify nodes exist as well on server side
+	k, err := kubelet.NewKubelet("http://localhost:8080", "agent-node-0")
 	if err != nil {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
