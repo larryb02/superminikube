@@ -22,7 +22,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		uid := r.URL.Query().Get("uid")
 		if uid != "" {
 			// TODO: custom errors for potential cases (key not found or internal error)
-			pod, err := GetPodByUid(nodename, uid, s.redisClient)
+			pod, err := GetPodByUid(r.Context(), nodename, uid, s.redisClient)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -40,6 +40,7 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodPost:
 		pod, err := CreatePod(
+			r.Context(),
 			nodename,
 			&api.ContainerSpec{
 				Image: "nginx",

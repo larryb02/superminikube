@@ -29,7 +29,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func (s *APIServer) Shutdown() {
 	slog.Info("shutting down apiserver")
-	s.cancel()
 	s.watchService.Shutdown()
 	s.server.Close()
 }
@@ -70,20 +69,15 @@ func Start() error {
 }
 
 func NewAPIServer() (*APIServer, error) {
-	ctx, cancel := context.WithCancel(context.Background()) // should probably get context from entry point
 	return &APIServer{
-		ctx:    ctx,
-		cancel: cancel,
 		redisClient: redis.NewClient(&redis.Options{
 			Addr: "host.docker.internal:6379", // TODO: make configurable, got so many options to worry about now
 		}),
-		watchService: watch.New(ctx),
+		watchService: watch.New(),
 	}, nil
 }
 
 type APIServer struct {
-	ctx          context.Context
-	cancel       context.CancelFunc
 	server       *http.Server
 	redisClient  *redis.Client
 	watchService *watch.WatchService

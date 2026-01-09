@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -70,12 +69,9 @@ func (ws *WatchService) Watch(key string) <-chan WatchEvent {
 	return ev
 }
 
-func New(parentCtx context.Context) *WatchService {
-	ctx, cancel := context.WithCancel(parentCtx)
+func New() *WatchService {
 	return &WatchService{
 		watchers: make(Watchers),
-		ctx:      ctx,
-		cancel:   cancel,
 	}
 }
 
@@ -100,7 +96,5 @@ type Event int
 type Watchers map[string]chan WatchEvent
 type WatchService struct {
 	watchers Watchers
-	ctx      context.Context
-	cancel   context.CancelFunc
 	mu       sync.RWMutex
 }

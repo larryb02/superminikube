@@ -23,10 +23,10 @@ func ListAllNamespacePods(kvstore *redis.Client) ([]api.Pod, error) {
 
 // write tests for crud (get/set/create/delete) of Pod objects via the apiserver
 // implement redis store once basic pod lifecycle flow is working
-func GetPodByUid(nodename string, uid string, kvstore *redis.Client) (api.Pod, error) {
+func GetPodByUid(ctx context.Context, nodename string, uid string, kvstore *redis.Client) (api.Pod, error) {
 	// TODO: Refactor need to get the pod by /resource/nodename/uid
 	slog.Info(fmt.Sprintf("Getting Pod with UID: %s", uid))
-	pod, err := kvstore.Get(context.TODO(), fmt.Sprintf("pods/%s/%s", nodename, uid)).Result()
+	pod, err := kvstore.Get(ctx, fmt.Sprintf("pods/%s/%s", nodename, uid)).Result()
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("failed to get pod from store: %v", err)
 	}
@@ -41,7 +41,7 @@ func GetPodByUid(nodename string, uid string, kvstore *redis.Client) (api.Pod, e
 }
 
 // NOTE: Return type could be of type CreatePodResponse in the future
-func CreatePod(nodename string, spec *api.ContainerSpec, kvstore *redis.Client) (api.Pod, error) {
+func CreatePod(ctx context.Context, nodename string, spec *api.ContainerSpec, kvstore *redis.Client) (api.Pod, error) {
 	// takes a decoded spec and creates a Pod object to store in-memory
 	var buf bytes.Buffer
 	// TODO: make sure uuid is unique
@@ -57,7 +57,7 @@ func CreatePod(nodename string, spec *api.ContainerSpec, kvstore *redis.Client) 
 		return api.Pod{}, fmt.Errorf("failed to encode pod: %v", err)
 	}
 	// flatten key into "resource/nodename/identifier"
-	err = kvstore.Set(context.TODO(), fmt.Sprintf("pods/%s/%s", nodename, pod.Uid.String()), buf.Bytes(), 0).Err() // TODO: pass ctx into each of this functions...
+	err = kvstore.Set(ctx, fmt.Sprintf("pods/%s/%s", nodename, pod.Uid.String()), buf.Bytes(), 0).Err()
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("failed to store pod: %v", err)
 	}

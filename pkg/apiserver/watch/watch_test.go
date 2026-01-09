@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -46,8 +45,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	ctx := context.Background()
-	ws := New(ctx)
+	ws := New()
 	testCases := []struct {
 		key     string
 		value   chan WatchEvent
@@ -65,8 +63,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestSetGetConcurrently(t *testing.T) {
-	ctx := context.Background()
-	ws := New(ctx)
+	ws := New()
 
 	const numGoroutines = 50
 	const numOpsPerGoroutine = 100
@@ -145,8 +142,7 @@ func TestNotify(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			ws := New(ctx)
+			ws := New()
 			key := tc.setup(ws)
 
 			var err error
@@ -200,8 +196,7 @@ func TestShutdown(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			ws := New(ctx)
+			ws := New()
 
 			channels := make([]<-chan WatchEvent, 0, len(tc.watcherKeys))
 			for _, key := range tc.watcherKeys {

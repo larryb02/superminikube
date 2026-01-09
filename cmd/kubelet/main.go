@@ -37,7 +37,7 @@ func Run() {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)
 	}
-	err = k.Start()
+	err = k.Start(ctx)
 	if err != nil {
 		slog.Error("Failed to start Kubelet:", "error", err)
 		os.Exit(1)

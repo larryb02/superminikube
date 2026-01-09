@@ -36,12 +36,12 @@ func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
 
 // TODO: move this to PodManager service
 // Pod lifecycle sync loop
-func (k *Kubelet) syncLoop(events <-chan watch.WatchEvent) {
+func (k *Kubelet) syncLoop(ctx context.Context, events <-chan watch.WatchEvent) {
 	// block until kubelet receives an event
 	// handle event based on type
 	for {
 		select {
-		case <-k.ctx.Done():
+		case <-ctx.Done():
 			slog.Info("syncLoop stopped due to context cancellation")
 			return
 		case event := <-events:
@@ -101,25 +101,25 @@ func (k *Kubelet) Cleanup() []error {
 	return errs
 }
 
-func (k *Kubelet) Start() error {
+func (k *Kubelet) Start(ctx context.Context) error {
 	defer k.Cleanup()
 	err := k.runtime.Ping()
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to start: %v", err)
 	}
 
-	events, err := k.client.Watch(k.ctx)
+	events, err := k.client.Watch(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to watch events: %v", err)
 	}
 
-	go k.syncLoop(events)
+	go k.syncLoop(ctx, events)
 
-	<-k.ctx.Done()
+	<-ctx.Done()
 	return nil
 }
 
-func NewKubelet(ctx context.Context, apiServerURL, nodeName string) (*Kubelet, error) {
+func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
 	rt, err := runtime.NewDockerRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubelet: %v", err)

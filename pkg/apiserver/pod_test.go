@@ -64,7 +64,7 @@ func TestCreatePod(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := CreatePod(tc.nodename, tc.spec, tc.client)
+			_, err := CreatePod(t.Context(), tc.nodename, tc.spec, tc.client)
 
 			if tc.expectError {
 				if err == nil {

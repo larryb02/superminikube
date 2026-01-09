@@ -64,10 +64,11 @@ func (ws *WatchService) WatchHandler(w http.ResponseWriter, r *http.Request) {
 			slog.Debug("request context done")
 			//TODO: close and delete channel
 			return
-		case <-ws.ctx.Done():
-			slog.Debug("watch service context done")
-			// TODO: send an event so client can disconnect cleanly
-			return
+		// case <-parentCtx.Done():
+		// 	slog.Debug("watch service context done")
+		// 	// TODO: send an event so client can disconnect cleanly
+		// 	return
+		// }
 		}
 	}
 }
