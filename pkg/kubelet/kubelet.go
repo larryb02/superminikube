@@ -26,7 +26,7 @@ func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
 		}
 		// TODO: figure out where i actually want to update the map
 		event.Pod.Container.ContainerId = cid
-		k.pods[event.Pod.Uid] = &event.Pod
+		k.pods[event.Pod.Uid] = event.Pod
 	case watch.Delete:
 		break
 	default:
@@ -128,8 +128,7 @@ func NewKubelet(ctx context.Context, apiServerURL, nodeName string) (*Kubelet, e
 	return &Kubelet{
 		client:   client,
 		runtime:  rt,
-		pods:     map[uuid.UUID]*api.Pod{},
-		ctx:      ctx,
+		pods:     map[uuid.UUID]api.Pod{},
 		nodeName: nodeName,
 	}, nil
 }
@@ -137,7 +136,6 @@ func NewKubelet(ctx context.Context, apiServerURL, nodeName string) (*Kubelet, e
 type Kubelet struct {
 	client   client.Client // TODO: may come up with better naming convention later
 	runtime  runtime.Runtime
-	pods     map[uuid.UUID]*api.Pod
-	ctx      context.Context
+	pods     map[uuid.UUID]api.Pod
 	nodeName string
 }
