@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+
+	"superminikube/pkg/api"
 )
 
 func (ws *WatchService) Get(key string) (chan WatchEvent, error) {
@@ -109,6 +111,10 @@ type WatchEvent struct {
 	// these fields are tentative
 	Resource string
 	Node     string
+	// TODO: will need to pass a general 'object' here
+	// will be an interface that every object implements
+	// or will have a field that designates it's type
+	Pod api.Pod
 }
 
 // TODO: Add events type here

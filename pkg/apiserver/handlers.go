@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"superminikube/pkg/api"
 	"superminikube/pkg/apiserver/watch"
-	"superminikube/pkg/spec"
 )
 
 func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,28 +39,30 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(pods)
 		}
 	case http.MethodPost:
-		// TODO: s.watchService.Notify only works because PodHandler is currently of type APIServer,
-		// this is bad coupling in my opinion
-		// also 'what if' this method gets called while no watcher assigned to endpoint what happens then?
-		// SHOULDNT happen but should prepared
-		err := s.watchService.Notify(watch.WatchEvent{
-			EventType:     watch.Add,
-			Resource: "pod",
-			Node:     nodename,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
 		pod, err := CreatePod(
 			nodename,
-			&spec.ContainerSpec{
+			&api.ContainerSpec{
 				Image: "nginx",
 			},
 			s.redisClient,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// TODO: s.watchService.Notify only works because PodHandler is currently of type APIServer,
+		// this is bad coupling in my opinion
+		// also 'what if' this method gets called while no watcher assigned to endpoint what happens then?
+		// SHOULDNT happen but should prepared
+		// this should also just get called inside the CreatePod function doesn't belong out here
+		err = s.watchService.Notify(watch.WatchEvent{
+			EventType:     watch.Add,
+			Resource: "pod",
+			Node:     nodename,
+			Pod: pod,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 		w.WriteHeader(http.StatusCreated)

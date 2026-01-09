@@ -3,7 +3,7 @@ package apiserver
 import (
 	"testing"
 
-	"superminikube/pkg/spec"
+	"superminikube/pkg/api"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -16,14 +16,14 @@ func TestCreatePod(t *testing.T) {
 	testCases := []struct {
 		name        string
 		nodename    string
-		spec        *spec.ContainerSpec
+		spec        *api.ContainerSpec
 		client      *redis.Client
 		expectError bool
 	}{
 		{
 			name:     "create pod with basic spec",
 			nodename: "test-node-1",
-			spec: &spec.ContainerSpec{
+			spec: &api.ContainerSpec{
 				Image: "nginx:latest",
 				Env: map[string]string{
 					"ENV_VAR": "test-value",
@@ -35,7 +35,7 @@ func TestCreatePod(t *testing.T) {
 		{
 			name:     "create pod with empty nodename",
 			nodename: "",
-			spec: &spec.ContainerSpec{
+			spec: &api.ContainerSpec{
 				Image: "alpine:latest",
 			},
 			client:      testClient,
@@ -44,12 +44,12 @@ func TestCreatePod(t *testing.T) {
 		{
 			name:     "create pod with ports and volumes",
 			nodename: "test-node-2",
-			spec: &spec.ContainerSpec{
+			spec: &api.ContainerSpec{
 				Image: "redis:latest",
 				Env: map[string]string{
 					"REDIS_PORT": "6379",
 				},
-				Ports: []spec.Port{
+				Ports: []api.Port{
 					{
 						Hostport:      "8080",
 						Containerport: "80",

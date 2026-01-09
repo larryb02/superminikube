@@ -14,6 +14,7 @@ import (
 	yaml "superminikube/pkg/spec" // TODO: another bandaid fix until i finish cleaning up
 )
 
+// this function will need a context passed to it, once it becomes concurrent
 func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:

@@ -7,39 +7,25 @@ import (
 	"net/netip"
 	"os"
 
+	"superminikube/pkg/api"
+
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"gopkg.in/yaml.v3"
 )
 
-// TODO: make Spec an interface that implements Decode
-type Spec struct {
-	ContainerSpec []ContainerSpec `yaml:"spec"`
-}
-
-type ContainerSpec struct {
-	Image   string            `yaml:"image"` // required
-	Env     map[string]string `yaml:"env,omitempty"`
-	Ports   []Port            `yaml:"ports,omitempty"`   // make this a map or a string of type "hostport:containerport"
-	Volumes []string          `yaml:"volumes,omitempty"` // only supporting empty volumes at the moment, may also want to move this to Pod level
-}
-
-type Port struct {
-	Hostport      string `yaml:"hostport"`
-	Containerport string `yaml:"containerport"`
-}
-
-func (cs *ContainerSpec) Validate() error {
+// TODO: a bandaid patch until i revisit this code
+func Validate(cs *api.ContainerSpec) error {
 	if cs.Image == "" {
 		return errors.New("image cannot be nil")
 	}
 	return nil
 }
 
-func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
+func Decode(cs *api.ContainerSpec) (client.ContainerCreateOptions, error) {
 	// Convert ContainerSpec to client.CreateContainerOptions
-	if err := cs.Validate(); err != nil {
+	if err := Validate(cs); err != nil {
 		slog.Error("Failed to decode spec: ", "msg", err)
 		return client.ContainerCreateOptions{}, err
 	}
@@ -78,8 +64,8 @@ func (cs *ContainerSpec) Decode() (client.ContainerCreateOptions, error) {
 	return opts, nil
 }
 
-func CreateSpec(specfile string) (*Spec, error) {
-	var spec Spec
+func CreateSpec(specfile string) (*api.Spec, error) {
+	var spec api.Spec
 	slog.Info("Opening File", "path", specfile)
 	data, err := os.ReadFile(specfile)
 	if err != nil {

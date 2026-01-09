@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	// "superminikube/pkg/spec"
+
+	"superminikube/pkg/api"
 )
 
 func TestContainerSpecDecode(t *testing.T) {
@@ -21,18 +22,18 @@ func TestContainerSpecDecode(t *testing.T) {
 	// 		Volumes: []string{"data"},
 	// 	},
 	// }
-	cs := ContainerSpec{
+	cs := api.ContainerSpec{
 		Image: "nginx",
 		Env: map[string]string{
 			"FOO": "bar",
 		},
-		Ports: []Port{
+		Ports: []api.Port{
 			{Hostport: "8080", Containerport: "80"},
 		},
 		Volumes: []string{"data"},
 	}
 
-	opts, err := cs.Decode()
+	opts, err := Decode(&cs)
 	if err != nil {
 		t.Fatalf("Decode() error = %v", err)
 	}
