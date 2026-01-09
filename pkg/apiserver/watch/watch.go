@@ -57,33 +57,6 @@ func (ws *WatchService) Notify(ev WatchEvent) error {
 	return nil
 }
 
-// // TODO: Delete
-// func (ws *WatchService) WatchLoop(key string) <-chan store.StoreEvent {
-// 	out := make(chan store.StoreEvent)
-// 	// TODO: Eventually key should be fully parameterized
-// 	// once other resources get introduced
-// 	key = fmt.Sprintf("pod/%s", key)
-// 	ws.watchers[key] = out
-// 	ws.wg.Go(func() {
-// 		slog.Info("starting watch loop")
-// 		// ch := ws.Watch(key)
-// 		// for {
-// 		// select {
-// 		// keys should always be resource/nodename
-// 		// we are watching for changes in a nodes environment
-// 		// watch may become more generalized than this
-// 		// case ev := <-ch:
-// 		// 	slog.Info("received kvstore event", "event", ev)
-// 		// 	out <- ev
-// 		<-ws.ctx.Done()
-// 		slog.Info("closing watch connection")
-// 		// return
-// 		// }
-// 		// }
-// 	})
-// 	return out
-// }
-
 func (ws *WatchService) Watch(key string) <-chan WatchEvent {
 	// make a channel for the key add it to map of channels
 	// TODO: Avoid making duplicate channels
