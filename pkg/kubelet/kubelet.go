@@ -48,7 +48,12 @@ func (k *Kubelet) syncLoop(ctx context.Context, events <-chan watch.WatchEvent) 
 		case <-ctx.Done():
 			slog.Info("syncLoop stopped due to context cancellation")
 			return
-		case event := <-events:
+		case event, ok := <-events:
+			if !ok {
+				slog.Info("event channel closed")
+				return // works for now -> 
+				// i guess best behavior would be to restart kubelet once user gets cluster working again
+			}
 			slog.Debug("Got event", "event", event)
 			k.handlePodEvent(ctx, event)
 		}
@@ -142,6 +147,7 @@ func (k *Kubelet) Start(ctx context.Context) error {
 	}
 	slog.Info("Successfully pinged Docker")
 	events, err := k.client.Watch(ctx)
+	// _ = events
 	if err != nil {
 		return fmt.Errorf("failed to watch events: %v", err)
 	}
@@ -157,16 +163,16 @@ func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
 	}
 	client := client.NewHTTPClient(apiServerURL, nodeName)
 	return &Kubelet{
-		client:   client,
-		containerruntime:  rt,
-		pods:     map[uuid.UUID]api.Pod{},
-		nodeName: nodeName,
+		client:           client,
+		containerruntime: rt,
+		pods:             map[uuid.UUID]api.Pod{},
+		nodeName:         nodeName,
 	}, nil
 }
 
 type Kubelet struct {
-	client   client.Client
-	containerruntime  *mobyclient.Client
-	pods     map[uuid.UUID]api.Pod
-	nodeName string
+	client           client.Client
+	containerruntime *mobyclient.Client
+	pods             map[uuid.UUID]api.Pod
+	nodeName         string
 }

@@ -107,7 +107,7 @@ func (c *HTTPClient) Update(ctx context.Context, resource string, id uuid.UUID, 
 
 func (c *HTTPClient) Watch(ctx context.Context) (<-chan watch.WatchEvent, error) {
 	eventChan := make(chan watch.WatchEvent)
-	defaultDelay := 5
+	defaultDelay := 1
 	const maxAttempts = 3
 	go func() {
 		defer close(eventChan)
@@ -115,17 +115,16 @@ func (c *HTTPClient) Watch(ctx context.Context) (<-chan watch.WatchEvent, error)
 		for {
 			select {
 			case <-ctx.Done():
+				slog.Debug("cancelled watch context")
 				return
 			default:
 				err := util.WithRetry(ctx, util.RetryOptions{
 					Attempts: maxAttempts,
 					Delay:    time.Duration(defaultDelay) * time.Second,
 					Backoff: func(attempt int) time.Duration {
-						var newDelay int
-						if attempt > 0 {
-							newDelay = defaultDelay * 2
-							defaultDelay = newDelay
-						}
+						newDelay := defaultDelay * 2
+						defaultDelay = newDelay
+						slog.Debug("new delay", "timer", newDelay)
 						return time.Second * time.Duration(newDelay)
 					},
 					ShouldRetry: func(err error) bool {
