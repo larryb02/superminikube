@@ -9,10 +9,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"superminikube/pkg/apiserver/watch"
-
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+
+	"superminikube/pkg/apiserver/watch"
 )
 
 func loggingMiddleware(next http.Handler) http.Handler {
