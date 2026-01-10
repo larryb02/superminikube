@@ -6,25 +6,25 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/moby/moby/api/types/jsonstream"
+	mobyclient "github.com/moby/moby/client"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"superminikube/pkg/api"
 	"superminikube/pkg/apiserver/watch"
 	"superminikube/pkg/client"
 	"superminikube/pkg/kubelet/runtime"
-	yaml "superminikube/pkg/spec" // TODO: another bandaid fix until i finish cleaning up
 )
 
-// this function will need a context passed to it, once it becomes concurrent
-func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
+func (k *Kubelet) handlePodEvent(ctx context.Context, event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:
-		slog.Info("creating pod with spec... on node...") // contexts that i plan to add
-		cid, err := k.handlePodCreate(event.Pod.Spec)
+		slog.Info("creating pod with spec... on node...")
+		cid, err := k.handlePodCreate(ctx, event.Pod.Spec)
 		if err != nil {
 			slog.Error("failed to create pod", "err", err)
 			return
 		}
-		// TODO: figure out where i actually want to update the map
 		event.Pod.Spec.Container.ContainerId = cid
 		k.pods[event.Pod.Uid] = event.Pod
 	case watch.Delete:
@@ -37,8 +37,6 @@ func (k *Kubelet) reconcilePod(event watch.WatchEvent) {
 // TODO: move this to PodManager service
 // Pod lifecycle sync loop
 func (k *Kubelet) syncLoop(ctx context.Context, events <-chan watch.WatchEvent) {
-	// block until kubelet receives an event
-	// handle event based on type
 	for {
 		select {
 		case <-ctx.Done():
@@ -46,7 +44,7 @@ func (k *Kubelet) syncLoop(ctx context.Context, events <-chan watch.WatchEvent) 
 			return
 		case event := <-events:
 			slog.Debug("Got event", "event", event)
-			k.reconcilePod(event)
+			k.handlePodEvent(ctx, event)
 		}
 	}
 }
@@ -56,72 +54,98 @@ func (k *Kubelet) handlePodDelete(param any) {
 }
 
 // Creates container then returns container id
-func (k *Kubelet) handlePodCreate(spec api.PodSpec) (string, error) {
+func (k *Kubelet) handlePodCreate(ctx context.Context, spec api.PodSpec) (string, error) {
 	slog.Info("Creating pods with spec", "spec", spec)
 	// pull image
-	// get container opts
-	// create container
+	pullOpts := mobyclient.ImagePullOptions{
+		Platforms: []ocispec.Platform{{Architecture: "amd64", OS: "linux"}},
+	}
+	slog.Info("Attempting to pull", "image", spec.Container.Image)
+	resp, err := k.runtime.ImagePull(ctx, spec.Container.Image, pullOpts)
+	if err != nil {
+		return "", fmt.Errorf("failed to pull image: %v", err)
+	}
+	var pullErrs []*jsonstream.Error
+	for m := range resp.JSONMessages(ctx) {
+		if m.Error != nil {
+			pullErrs = append(pullErrs, m.Error)
+		} else {
+			slog.Info("Status:", "status", m.Status)
+		}
+	}
+	if len(pullErrs) > 0 {
+		return "", fmt.Errorf("failed to pull image: %v", pullErrs)
+	}
+	containerOpts, err := runtime.PodSpecToCreateContainerOpts(spec)
+	if err != nil {
+		return "", fmt.Errorf("failed to create container opts: %v", err)
+	}
+	createRes, err := k.runtime.ContainerCreate(ctx, containerOpts)
+	if err != nil {
+		return "", fmt.Errorf("failed to create container: %v", err)
+	}
+	slog.Info("Created", "container", createRes.ID)
 	// start container
-	// set status
-	// create pod, then store in map
-	err := k.runtime.Pull(spec.Container.Image)
+	_, err = k.runtime.ContainerStart(ctx, createRes.ID, mobyclient.ContainerStartOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to launch pod: %v", err)
+		return "", fmt.Errorf("failed to start container: %v", err)
 	}
-	containerOpts, err := yaml.Decode(&spec)
-	if err != nil {
-		return "", fmt.Errorf("failed to launch pod: %v", err)
+	slog.Info("Started", "container", createRes.ID)
+	return createRes.ID, nil
+}
+
+func (k *Kubelet) Shutdown(ctx context.Context) {
+	removedContainers := make([]string, 0, len(k.pods))
+	errs := make([]error, 0)
+	for _, p := range k.pods {
+		err := k.CleanupPod(ctx, p)
+		if err != nil {
+			err = fmt.Errorf("id: %s\terr: %v", p.Spec.Container.ContainerId, err)
+			errs = append(errs, err)
+			continue
+		}
+		removedContainers = append(removedContainers, p.Spec.Container.ContainerId)
 	}
-	containerId, err := k.runtime.CreateContainer(containerOpts)
-	if err != nil {
-		return "", fmt.Errorf("failed to launch pod: %v", err)
+	if len(errs) > 0 {
+		slog.Error("failed to remove containers", "containers", errs)
 	}
-	err = k.runtime.StartContainer(containerId)
-	if err != nil {
-		return "", fmt.Errorf("failed to launch pod: %v", err)
-	}
-	return containerId, nil
+	slog.Debug("containers removed", "containers", removedContainers)
 }
 
 // Cleanup Kubelet if process killed/stopped
 // stops and removes containers running in pods
-func (k *Kubelet) Cleanup() []error {
-	slog.Info("cleaning up")
-	stoppedContainers := make([]string, 0, len(k.pods)) // only store container ids for now
-	errs := make([]error, 0)
-	for _, p := range k.pods {
-		err := k.runtime.StopContainer(p.Spec.Container.ContainerId)
-		if err != nil {
-			err = fmt.Errorf("failed to stop container\nid: %s,\n err: %v", p.Spec.Container.ContainerId, err)
-			errs = append(errs, err)
-			continue
-		}
-		stoppedContainers = append(stoppedContainers, p.Spec.Container.ContainerId) // probably better if you list the containers that FAILED
+func (k *Kubelet) CleanupPod(ctx context.Context, p api.Pod) error {
+	ctx = context.WithoutCancel(ctx)
+	cid := p.Spec.Container.ContainerId
+	slog.Info("removing container", "containerid", cid)
+	_, err := k.runtime.ContainerRemove(ctx, cid, mobyclient.ContainerRemoveOptions{
+		Force:         true,
+		RemoveVolumes: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove container in pod: %v\nerr: %v", p.Uid, err)
 	}
-	slog.Debug("containers stopped", "containers", stoppedContainers)
-	return errs
+	return nil
 }
 
 func (k *Kubelet) Start(ctx context.Context) error {
-	defer k.Cleanup()
-	err := k.runtime.Ping()
+	defer k.Shutdown(ctx)
+	_, err := k.runtime.Ping(ctx, mobyclient.PingOptions{})
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to start: %v", err)
 	}
-
+	slog.Info("Successfully pinged Docker")
 	events, err := k.client.Watch(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to watch events: %v", err)
 	}
-
 	go k.syncLoop(ctx, events)
-
 	<-ctx.Done()
 	return nil
 }
 
 func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
-	rt, err := runtime.NewDockerRuntime()
+	rt, err := mobyclient.New(mobyclient.FromEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubelet: %v", err)
 	}
@@ -135,8 +159,8 @@ func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
 }
 
 type Kubelet struct {
-	client   client.Client // TODO: may come up with better naming convention later
-	runtime  runtime.Runtime
+	client   client.Client
+	runtime  *mobyclient.Client
 	pods     map[uuid.UUID]api.Pod
 	nodeName string
 }
