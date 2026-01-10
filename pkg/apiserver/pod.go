@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"superminikube/pkg/api"
-
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+
+	"superminikube/pkg/api"
 )
 
 // TODO: Implement update and append when the need arises
