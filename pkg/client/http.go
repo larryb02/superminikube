@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"superminikube/pkg/apiserver/watch"
+	"superminikube/pkg/util"
 )
 
 type HTTPClient struct {
@@ -105,31 +107,39 @@ func (c *HTTPClient) Update(ctx context.Context, resource string, id uuid.UUID, 
 
 func (c *HTTPClient) Watch(ctx context.Context) (<-chan watch.WatchEvent, error) {
 	eventChan := make(chan watch.WatchEvent)
-
+	defaultDelay := 5
+	const maxAttempts = 3
 	go func() {
-		const maxRetries = 3
-		numRetries := 0
 		defer close(eventChan)
 
 		for {
-			if numRetries > maxRetries {
-				// TODO: may want to return an error here
-				slog.Info("Max retries reached")
-				return
-			}
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				err := c.watchStream(ctx, eventChan)
+				err := util.WithRetry(ctx, util.RetryOptions{
+					Attempts: maxAttempts,
+					Delay:    time.Duration(defaultDelay) * time.Second,
+					Backoff: func(attempt int) time.Duration {
+						var newDelay int
+						if attempt > 0 {
+							newDelay = defaultDelay * 2
+							defaultDelay = newDelay
+						}
+						return time.Second * time.Duration(newDelay)
+					},
+					ShouldRetry: func(err error) bool {
+						return errors.Is(err, context.DeadlineExceeded) ||
+							strings.Contains(err.Error(), "connection refused")
+					},
+				},
+					func(ctx context.Context) error {
+						return c.watchStream(ctx, eventChan)
+					})
 				if err != nil {
 					slog.Error("watch stream error", "error", err)
-					// Exponential backoff before reconnecting
-					time.Sleep(time.Second * 5)
-					numRetries++
-					continue
+					return
 				}
-				numRetries = 0
 			}
 		}
 	}()
