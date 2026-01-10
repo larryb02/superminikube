@@ -1,11 +1,13 @@
-package apiserver
+package pod
 
 import (
 	"testing"
 
-	"superminikube/pkg/api"
-
 	"github.com/go-redis/redis/v8"
+
+	"superminikube/pkg/api"
+	// TODO: probably need to create a TestMain and do some orchestration...
+	"superminikube/pkg/apiserver/watch"
 )
 
 // TODO: prefill test client with some data
@@ -14,6 +16,8 @@ var testClient = redis.NewClient(&redis.Options{
 })
 
 func TestCreatePod(t *testing.T) {
+	testWatchService := watch.NewService()
+	service := NewService(testClient, testWatchService)
 	testCases := []struct {
 		name        string
 		nodename    string
@@ -71,7 +75,8 @@ func TestCreatePod(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := CreatePod(t.Context(), tc.nodename, tc.spec, tc.client)
+			// TODO: writing to a non-existent channel at the moment. Check this out...
+			_, err := service.CreatePod(t.Context(), tc.nodename, tc.spec)
 
 			if tc.expectError {
 				if err == nil {

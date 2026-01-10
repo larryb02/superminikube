@@ -8,6 +8,12 @@ import (
 	"superminikube/pkg/api"
 )
 
+type Service interface {
+	Watch(string) <-chan WatchEvent
+	Notify(WatchEvent) error
+}
+
+// should probably make getter and setter private
 func (ws *WatchService) Get(key string) (chan WatchEvent, error) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
@@ -69,7 +75,7 @@ func (ws *WatchService) Watch(key string) <-chan WatchEvent {
 	return ev
 }
 
-func New() *WatchService {
+func NewService() *WatchService {
 	return &WatchService{
 		watchers: make(Watchers),
 	}

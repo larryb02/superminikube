@@ -12,6 +12,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 
+	"superminikube/pkg/apiserver/pod"
 	"superminikube/pkg/apiserver/watch"
 )
 
@@ -29,7 +30,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func (s *APIServer) Shutdown() {
 	slog.Info("shutting down apiserver")
-	s.watchService.Shutdown()
 	s.server.Close()
 }
 
@@ -45,16 +45,17 @@ func Start() error {
 		return fmt.Errorf("failed to create API server: %w", err)
 	}
 	slog.Info("starting API server...")
-	// TODO: A cleaner pattern may be to setup service specific routers in their own packages
-	// and 'add' them all to this route
-	// may also want a root route like /api
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
 	r.Use(loggingMiddleware)
-	api.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}")
-	api.HandleFunc("/pod", s.PodHandler).Queries("nodename", "{nodename}", "uid", "{uid}")
+	// TODO: This is proof that notify needs to exist elsewhere...
+	watchService := watch.NewService()
+	podService := pod.NewService(s.redisClient, watchService)
+	podHandler := pod.NewHandler(podService)
+	api.HandleFunc("/pod", podHandler.CreatePod).Queries("nodename", "{nodename}")
+	api.HandleFunc("/pod", podHandler.GetPod).Queries("nodename", "{nodename}", "uid", "{uid}")
 	// post is probably the better verb here
-	api.HandleFunc("/watch", s.watchService.WatchHandler).Methods(http.MethodGet) // eventually will be watching per node
+	api.HandleFunc("/watch", watchService.WatchHandler).Methods(http.MethodGet)
 	// TODO: will eventually initialize server inside NewAPIServer()
 	s.server = &http.Server{
 		Addr:    ":8080",
@@ -73,12 +74,12 @@ func NewAPIServer() (*APIServer, error) {
 		redisClient: redis.NewClient(&redis.Options{
 			Addr: "host.docker.internal:6379", // TODO: make configurable, got so many options to worry about now
 		}),
-		watchService: watch.New(),
 	}, nil
 }
 
 type APIServer struct {
-	server       *http.Server
-	redisClient  *redis.Client
-	watchService *watch.WatchService
+	server      *http.Server
+	redisClient *redis.Client
+	// TODO
+	config interface{}
 }

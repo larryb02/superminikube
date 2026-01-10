@@ -7,14 +7,6 @@ import (
 	"time"
 )
 
-// hmm probably won't test this
-// func TestRegisterWatcher(t *testing.T) {
-// 	ctx := context.Background()
-// 	ws := New(ctx)
-// 	_ = ws
-// 	t.Errorf("failed to register watcher")
-// }
-
 func TestGet(t *testing.T) {
 	ch := make(chan WatchEvent)
 	ws := WatchService{
@@ -45,7 +37,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	ws := New()
+	ws := NewService()
 	testCases := []struct {
 		key     string
 		value   chan WatchEvent
@@ -61,9 +53,9 @@ func TestSet(t *testing.T) {
 		}
 	}
 }
-
+// TODO: check this test out... might end up refactoring all of my tests anyways
 func TestSetGetConcurrently(t *testing.T) {
-	ws := New()
+	ws := NewService()
 
 	const numGoroutines = 50
 	const numOpsPerGoroutine = 100
@@ -142,7 +134,7 @@ func TestNotify(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ws := New()
+			ws := NewService()
 			key := tc.setup(ws)
 
 			var err error
@@ -196,7 +188,7 @@ func TestShutdown(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ws := New()
+			ws := NewService()
 
 			channels := make([]<-chan WatchEvent, 0, len(tc.watcherKeys))
 			for _, key := range tc.watcherKeys {

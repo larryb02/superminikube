@@ -10,6 +10,7 @@ import (
 )
 
 func (ws *WatchService) WatchHandler(w http.ResponseWriter, r *http.Request) {
+	defer ws.Shutdown()
 	// want this to be a stream
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
