@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 
 	"superminikube/pkg/apiserver/watch"
-	"superminikube/pkg/util"
 )
 
 type HTTPClient struct {
@@ -118,7 +117,7 @@ func (c *HTTPClient) Watch(ctx context.Context) (<-chan watch.WatchEvent, error)
 				slog.Debug("cancelled watch context")
 				return
 			default:
-				err := util.WithRetry(ctx, util.RetryOptions{
+				err := WithRetry(ctx, RetryOptions{
 					Attempts: maxAttempts,
 					Delay:    time.Duration(defaultDelay) * time.Second,
 					Backoff: func(attempt int) time.Duration {
