@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 	}
 	testKubelet = &Kubelet{
 		client:  client.NewHTTPClient("http://localhost:8080", "test-node"),
-		runtime: rt,
+		containerruntime: rt,
 	}
 	m.Run()
 }
@@ -50,7 +50,6 @@ func TestPodCreate(t *testing.T) {
 			}
 		}
 	})
-
 }
 
 // TODO

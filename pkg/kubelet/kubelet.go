@@ -61,7 +61,7 @@ func (k *Kubelet) handlePodCreate(ctx context.Context, spec api.PodSpec) (string
 		Platforms: []ocispec.Platform{{Architecture: "amd64", OS: "linux"}},
 	}
 	slog.Info("Attempting to pull", "image", spec.Container.Image)
-	resp, err := k.runtime.ImagePull(ctx, spec.Container.Image, pullOpts)
+	resp, err := k.containerruntime.ImagePull(ctx, spec.Container.Image, pullOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to pull image: %v", err)
 	}
@@ -80,13 +80,13 @@ func (k *Kubelet) handlePodCreate(ctx context.Context, spec api.PodSpec) (string
 	if err != nil {
 		return "", fmt.Errorf("failed to create container opts: %v", err)
 	}
-	createRes, err := k.runtime.ContainerCreate(ctx, containerOpts)
+	createRes, err := k.containerruntime.ContainerCreate(ctx, containerOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to create container: %v", err)
 	}
 	slog.Info("Created", "container", createRes.ID)
 	// start container
-	_, err = k.runtime.ContainerStart(ctx, createRes.ID, mobyclient.ContainerStartOptions{})
+	_, err = k.containerruntime.ContainerStart(ctx, createRes.ID, mobyclient.ContainerStartOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to start container: %v", err)
 	}
@@ -118,7 +118,7 @@ func (k *Kubelet) CleanupPod(ctx context.Context, p api.Pod) error {
 	ctx = context.WithoutCancel(ctx)
 	cid := p.Spec.Container.ContainerId
 	slog.Info("removing container", "containerid", cid)
-	_, err := k.runtime.ContainerRemove(ctx, cid, mobyclient.ContainerRemoveOptions{
+	_, err := k.containerruntime.ContainerRemove(ctx, cid, mobyclient.ContainerRemoveOptions{
 		Force:         true,
 		RemoveVolumes: true,
 	})
@@ -130,7 +130,7 @@ func (k *Kubelet) CleanupPod(ctx context.Context, p api.Pod) error {
 
 func (k *Kubelet) Start(ctx context.Context) error {
 	defer k.Shutdown(ctx)
-	_, err := k.runtime.Ping(ctx, mobyclient.PingOptions{})
+	_, err := k.containerruntime.Ping(ctx, mobyclient.PingOptions{})
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to start: %v", err)
 	}
@@ -152,7 +152,7 @@ func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
 	client := client.NewHTTPClient(apiServerURL, nodeName)
 	return &Kubelet{
 		client:   client,
-		runtime:  rt,
+		containerruntime:  rt,
 		pods:     map[uuid.UUID]api.Pod{},
 		nodeName: nodeName,
 	}, nil
@@ -160,7 +160,7 @@ func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
 
 type Kubelet struct {
 	client   client.Client
-	runtime  *mobyclient.Client
+	containerruntime  *mobyclient.Client
 	pods     map[uuid.UUID]api.Pod
 	nodeName string
 }
