@@ -16,6 +16,11 @@ import (
 	"superminikube/pkg/kubelet/runtime"
 )
 
+func (k *Kubelet) AddPod(p api.Pod) {
+	k.pods[p.Uid] = p
+	slog.Debug("added pod to internal map", "pods", k.pods, "added", p)
+}
+
 func (k *Kubelet) handlePodEvent(ctx context.Context, event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:
@@ -25,8 +30,9 @@ func (k *Kubelet) handlePodEvent(ctx context.Context, event watch.WatchEvent) {
 			slog.Error("failed to create pod", "err", err)
 			return
 		}
-		event.Pod.Spec.Container.ContainerId = cid
-		k.pods[event.Pod.Uid] = event.Pod
+		p := event.Pod
+		p.Spec.Container.ContainerId = cid
+		k.AddPod(p)
 	case watch.Delete:
 		break
 	default:
