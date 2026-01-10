@@ -39,14 +39,24 @@ func (s *APIServer) PodHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(pods)
 		}
 	case http.MethodPost:
+		defer r.Body.Close()
+		var spec api.PodSpec
+		err := json.NewDecoder(r.Body).Decode(&spec)
+		// TODO: better request body handling
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				http.Error(w, "Empty request body", http.StatusBadRequest)
+			} else {
+				http.Error(w, "Malformed request", http.StatusBadRequest)
+				slog.Error("failed to decode", "msg", err)
+			}
+			return
+		}
+		slog.Debug("request body", "body", spec)
 		pod, err := CreatePod(
 			r.Context(),
 			nodename,
-			api.PodSpec{
-				Container: api.Container{
-					Image: "nginx",
-				},
-			},
+			spec,
 			s.redisClient,
 		)
 		if err != nil {
