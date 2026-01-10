@@ -64,7 +64,6 @@ func TestSetGetConcurrently(t *testing.T) {
 
 	for g := 0; g < numGoroutines; g++ {
 		wg.Go(func() {
-			defer wg.Done()
 			for i := 0; i < numOpsPerGoroutine; i++ {
 				key := fmt.Sprintf("key-%d-%d", g, i)
 				ch := make(chan WatchEvent)
