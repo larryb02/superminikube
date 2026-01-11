@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"superminikube/pkg/api"
+	"superminikube/pkg/apiserver/utils"
 )
 
 func NewHandler(service Service) handler {
@@ -76,8 +77,9 @@ func (h *handler) CreatePod(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to process request", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(pod)
+	// w.WriteHeader(http.StatusCreated)
+	// json.NewEncoder(w).Encode(pod)
+	utils.WriteJSONResponse(w, http.StatusCreated, pod)
 }
 
 func (h *handler) DeletePod(w http.ResponseWriter, r *http.Request) {
