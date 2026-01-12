@@ -11,16 +11,6 @@ import (
 	"superminikube/pkg/apiserver/utils"
 )
 
-func NewHandler(service Service) handler {
-	return handler{
-		service: service,
-	}
-}
-
-type handler struct {
-	service Service
-}
-
 func (h *handler) GetPod(w http.ResponseWriter, r *http.Request) {
 	nodename := r.URL.Query().Get("nodename")
 	if nodename == "" {
@@ -85,4 +75,14 @@ func (h *handler) CreatePod(w http.ResponseWriter, r *http.Request) {
 func (h *handler) DeletePod(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("DELETE Pod\n"))
+}
+
+func NewHandler(service Service) handler {
+	return handler{
+		service: service,
+	}
+}
+
+type handler struct {
+	service Service
 }

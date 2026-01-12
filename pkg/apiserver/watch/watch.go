@@ -10,7 +10,6 @@ import (
 
 type Service interface {
 	Watch(string) <-chan WatchEvent
-	Notify(WatchEvent) error
 }
 
 // should probably make getter and setter private

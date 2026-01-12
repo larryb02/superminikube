@@ -49,7 +49,6 @@ func (s *PodService) GetPodByUid(ctx context.Context, nodename, uid string) (api
 		return api.Pod{}, fmt.Errorf("failed to get pod from store: %v", err)
 	}
 	var p api.Pod
-	// TODO: there is probably a better way to decode
 	decoder := gob.NewDecoder(bytes.NewReader([]byte(pod)))
 	err = decoder.Decode(&p)
 	if err != nil {
@@ -68,7 +67,6 @@ func (s *PodService) CreatePod(ctx context.Context, nodename string, spec api.Po
 		Nodename: nodename,
 		Spec:     spec,
 	}
-	// TODO: shouldn't be encoding in this function
 	encoder := gob.NewEncoder(&buf)
 	err := encoder.Encode(pod)
 	if err != nil {

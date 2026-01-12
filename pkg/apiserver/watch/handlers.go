@@ -73,3 +73,13 @@ func (ws *WatchService) WatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func NewHandler(service Service) handler {
+	return handler{
+		service: service,
+	}
+}
+
+type handler struct {
+	service Service
+}
