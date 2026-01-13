@@ -12,7 +12,7 @@ import (
 
 // TODO: prefill test client with some data
 var testClient = redis.NewClient(&redis.Options{
-	Addr: "host.docker.internal:6379",
+	Addr: "localhost:6379",
 })
 
 func TestCreatePod(t *testing.T) {
