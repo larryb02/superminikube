@@ -30,7 +30,7 @@ jobs:
         run: apk --update add redis
 
       - name: Check Redis is alive
-        run: redis-cli -h ci-redis:6379 ping
+        run: redis-cli -h ci-redis ping
 
       # - name: Run tests
       #   run: docker-compose -f ci/compose.yml up -d && go test -v ./...
