@@ -16,7 +16,7 @@ jobs:
       - name: Start dependencies
         run: |
           docker network create ci-network; \
-          docker run -d --name ci-redis --network ci-network redis
+          docker run -d --name ci-redis --network host redis
 
       - name: Install redis-cli
         run: apk --update add redis
@@ -24,7 +24,7 @@ jobs:
       - name: Is it alive?
         run: |
           for i in $(seq 1 20); do
-            if redis-cli -h ci-redis ping | grep -q PONG; then
+            if redis-cli ping | grep -q PONG; then
               echo "Redis is ready"
               break
             fi
