@@ -22,13 +22,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start dependencies
-        run: docker-compose -f ci/compose.yml up -d
+        run: | 
+          docker network create ci-network; \
+          docker run -d --name ci-redis --network ci-network redis
 
       - name: Install redis-cli
         run: apk --update add redis
 
       - name: Check Redis is alive
-        run: redis-cli -h localhost ping
+        run: redis-cli -h ci-redis:6379 ping
 
       # - name: Run tests
       #   run: docker-compose -f ci/compose.yml up -d && go test -v ./...
