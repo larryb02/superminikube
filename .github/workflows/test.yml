@@ -21,11 +21,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start dependencies
-        run: docker-compose -f ci/compose.yml up -d
+      # - name: Start dependencies
+      #   run: docker-compose -f ci/compose.yml up -d
 
-      - name: Is it alive?
-        run: docker exec $(docker ps -qf "name=ci-redis-1") /usr/local/bin/redis-cli ping
+      # - name: Is it alive?
+      #   run: docker exec $(docker ps -qf "name=ci-redis-1") /usr/local/bin/redis-cli ping
 
       - name: Run tests
-        run: go test -v ./...
+        run: docker-compose -f ci/compose.yml up -d && go test -v ./...
