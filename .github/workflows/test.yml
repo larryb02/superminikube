@@ -27,5 +27,5 @@ jobs:
       - name: Is it alive?
         run: docker exec $(docker ps -qf "name=ci-redis-1") /usr/local/bin/redis-cli ping
 
-      # - name: Run tests
-      #   run: go test -v ./...
+      - name: Run tests
+        run: go test -v ./...
