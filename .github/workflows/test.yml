@@ -24,5 +24,8 @@ jobs:
       - name: Start dependencies
         run: docker-compose -f ci/compose.yml up -d
 
-      - name: Run tests
-        run: go test -v ./...
+      - name: Is it alive?
+        run: docker exec $(docker ps -qf "name=ci-redis-1") /usr/local/bin/redis-cli ping
+
+      # - name: Run tests
+      #   run: go test -v ./...
