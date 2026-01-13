@@ -10,14 +10,6 @@ jobs:
       image: docker:dind
       options: --privileged
     steps:
-      - name: Start Docker daemon
-        run: |
-          dockerd &
-          sleep 5
-
-      - name: Install dependencies
-        run: apk add --no-cache git go docker-compose
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -29,7 +21,7 @@ jobs:
       - name: Install redis-cli
         run: apk --update add redis
 
-      - name: Check Redis is alive
+      - name: Is it alive?
         run: |
           for i in $(seq 1 20); do
             if docker exec ci-redis redis-cli ping | grep -q PONG; then
