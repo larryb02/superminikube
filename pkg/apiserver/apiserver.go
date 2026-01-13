@@ -72,7 +72,7 @@ func Start() error {
 func NewAPIServer() (*APIServer, error) {
 	return &APIServer{
 		redisClient: redis.NewClient(&redis.Options{
-			Addr: "host.docker.internal:6379", // TODO: make configurable, got so many options to worry about now
+			Addr: "localhost:6379", // TODO: make configurable, got so many options to worry about now
 		}),
 	}, nil
 }
