@@ -77,6 +77,7 @@ func NewAPIServer() (*APIServer, error) {
 	}, nil
 }
 
+
 type APIServer struct {
 	server      *http.Server
 	redisClient *redis.Client
