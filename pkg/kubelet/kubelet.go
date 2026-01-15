@@ -6,9 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/moby/moby/api/types/jsonstream"
-	mobyclient "github.com/moby/moby/client"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"superminikube/pkg/api"
 	"superminikube/pkg/apiserver/watch"
@@ -25,14 +22,19 @@ func (k *Kubelet) handlePodEvent(ctx context.Context, event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:
 		slog.Info("creating pod with spec... on node...")
-		cid, err := k.handlePodCreate(ctx, event.Pod.Spec)
+		err := k.containerruntime.CreatePod(ctx, event.Pod.Spec)
 		if err != nil {
 			slog.Error("failed to create pod", "err", err)
 			return
 		}
-		p := event.Pod
-		p.Spec.Container.ContainerId = cid
-		k.AddPod(p)
+		// cid, err := k.handlePodCreate(ctx, event.Pod.Spec)
+		// if err != nil {
+		// 	slog.Error("failed to create pod", "err", err)
+		// 	return
+		// }
+		// p := event.Pod
+		// p.Spec.Container.ContainerId = cid
+		// k.AddPod(p)
 	case watch.Delete:
 		break
 	default:
@@ -65,51 +67,55 @@ func (k *Kubelet) handlePodDelete(param any) {
 }
 
 // Creates container then returns container id
-func (k *Kubelet) handlePodCreate(ctx context.Context, spec api.PodSpec) (string, error) {
-	slog.Info("Creating pods with spec", "spec", spec)
-	// pull image
-	pullOpts := mobyclient.ImagePullOptions{
-		Platforms: []ocispec.Platform{{Architecture: "amd64", OS: "linux"}},
-	}
-	slog.Info("Attempting to pull", "image", spec.Container.Image)
-	resp, err := k.containerruntime.ImagePull(ctx, spec.Container.Image, pullOpts)
-	if err != nil {
-		return "", fmt.Errorf("failed to pull image: %v", err)
-	}
-	var pullErrs []*jsonstream.Error
-	for m := range resp.JSONMessages(ctx) {
-		if m.Error != nil {
-			pullErrs = append(pullErrs, m.Error)
-		} else {
-			slog.Info("Status:", "status", m.Status)
-		}
-	}
-	if len(pullErrs) > 0 {
-		return "", fmt.Errorf("failed to pull image: %v", pullErrs)
-	}
-	containerOpts, err := runtime.PodSpecToCreateContainerOpts(spec)
-	if err != nil {
-		return "", fmt.Errorf("failed to create container opts: %v", err)
-	}
-	createRes, err := k.containerruntime.ContainerCreate(ctx, containerOpts)
-	if err != nil {
-		return "", fmt.Errorf("failed to create container: %v", err)
-	}
-	slog.Info("Created", "container", createRes.ID)
-	// start container
-	_, err = k.containerruntime.ContainerStart(ctx, createRes.ID, mobyclient.ContainerStartOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to start container: %v", err)
-	}
-	slog.Info("Started", "container", createRes.ID)
-	return createRes.ID, nil
-}
+// func (k *Kubelet) handlePodCreate(ctx context.Context, spec api.PodSpec) (string, error) {
+// 	slog.Info("Creating pods with spec", "spec", spec)
+// 	err := k.containerruntime.CreatePod(ctx, spec)
+// 	if err != nil {
+// 		return "", nil
+// 	}
+// 	// pull image
+// 	// pullOpts := mobyclient.ImagePullOptions{
+// 	// 	Platforms: []ocispec.Platform{{Architecture: "amd64", OS: "linux"}},
+// 	// }
+// 	// slog.Info("Attempting to pull", "image", spec.Container.Image)
+// 	// resp, err := k.containerruntime.ImagePull(ctx, spec.Container.Image, pullOpts)
+// 	// if err != nil {
+// 	// 	return "", fmt.Errorf("failed to pull image: %v", err)
+// 	// }
+// 	// var pullErrs []*jsonstream.Error
+// 	// for m := range resp.JSONMessages(ctx) {
+// 	// 	if m.Error != nil {
+// 	// 		pullErrs = append(pullErrs, m.Error)
+// 	// 	} else {
+// 	// 		slog.Info("Status:", "status", m.Status)
+// 	// 	}
+// 	// }
+// 	// if len(pullErrs) > 0 {
+// 	// 	return "", fmt.Errorf("failed to pull image: %v", pullErrs)
+// 	// }
+// 	// containerOpts, err := runtime.PodSpecToCreateContainerOpts(spec)
+// 	// if err != nil {
+// 	// 	return "", fmt.Errorf("failed to create container opts: %v", err)
+// 	// }
+// 	// createRes, err := k.containerruntime.ContainerCreate(ctx, containerOpts)
+// 	// if err != nil {
+// 	// 	return "", fmt.Errorf("failed to create container: %v", err)
+// 	// }
+// 	// slog.Info("Created", "container", createRes.ID)
+// 	// // start container
+// 	// _, err = k.containerruntime.ContainerStart(ctx, createRes.ID, mobyclient.ContainerStartOptions{})
+// 	// if err != nil {
+// 	// 	return "", fmt.Errorf("failed to start container: %v", err)
+// 	// }
+// 	// slog.Info("Started", "container", createRes.ID)
+// 	return createRes.ID, nil
+// }
 
 func (k *Kubelet) Shutdown(ctx context.Context) {
 	removedContainers := make([]string, 0, len(k.pods))
 	errs := make([]error, 0)
 	for _, p := range k.pods {
-		err := k.CleanupPod(ctx, p)
+		err := k.DeletePod(ctx, p)
 		if err != nil {
 			err = fmt.Errorf("id: %s\terr: %v", p.Spec.Container.ContainerId, err)
 			errs = append(errs, err)
@@ -125,14 +131,9 @@ func (k *Kubelet) Shutdown(ctx context.Context) {
 
 // Cleanup Kubelet if process killed/stopped
 // stops and removes containers running in pods
-func (k *Kubelet) CleanupPod(ctx context.Context, p api.Pod) error {
+func (k *Kubelet) DeletePod(ctx context.Context, p api.Pod) error {
 	ctx = context.WithoutCancel(ctx)
-	cid := p.Spec.Container.ContainerId
-	slog.Info("removing container", "containerid", cid)
-	_, err := k.containerruntime.ContainerRemove(ctx, cid, mobyclient.ContainerRemoveOptions{
-		Force:         true,
-		RemoveVolumes: true,
-	})
+	err := k.containerruntime.DeletePod(ctx, p)
 	if err != nil {
 		return fmt.Errorf("failed to remove container in pod: %v\nerr: %v", p.Uid, err)
 	}
@@ -141,7 +142,7 @@ func (k *Kubelet) CleanupPod(ctx context.Context, p api.Pod) error {
 
 func (k *Kubelet) Start(ctx context.Context) error {
 	defer k.Shutdown(ctx)
-	_, err := k.containerruntime.Ping(ctx, mobyclient.PingOptions{})
+	err := k.containerruntime.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to start: %v", err)
 	}
@@ -157,22 +158,27 @@ func (k *Kubelet) Start(ctx context.Context) error {
 }
 
 func NewKubelet(apiServerURL, nodeName string) (*Kubelet, error) {
-	rt, err := mobyclient.New(mobyclient.FromEnv)
+	rt, err := runtime.NewDockerRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubelet: %v", err)
 	}
-	client := client.NewHTTPClient(apiServerURL, nodeName)
+	return NewKubeletWithRuntime(apiServerURL, nodeName, rt), nil
+}
+
+func NewKubeletWithRuntime(apiServerURL, nodeName string, rt runtime.ContainerRuntime) *Kubelet {
+	c := client.NewHTTPClient(apiServerURL, nodeName)
 	return &Kubelet{
-		client:           client,
+		client:           c,
 		containerruntime: rt,
 		pods:             map[uuid.UUID]api.Pod{},
 		nodeName:         nodeName,
-	}, nil
+	}
 }
 
 type Kubelet struct {
 	client           client.Client
-	containerruntime *mobyclient.Client
+	// containerruntime *mobyclient.Client
+	containerruntime runtime.ContainerRuntime
 	pods             map[uuid.UUID]api.Pod
 	nodeName         string
 }

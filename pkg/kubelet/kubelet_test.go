@@ -3,22 +3,20 @@ package kubelet
 import (
 	"testing"
 
-	mobyclient "github.com/moby/moby/client"
-
 	"superminikube/pkg/api"
 	"superminikube/pkg/client"
+	"superminikube/pkg/kubelet/runtime"
 )
 
 var testKubelet *Kubelet
 
 func TestMain(m *testing.M) {
-	rt, err := mobyclient.New(mobyclient.FromEnv)
-	if err != nil {
-		panic(err)
+	rt := runtime.FakeRuntime{
+
 	}
 	testKubelet = &Kubelet{
 		client:  client.NewHTTPClient("http://localhost:8080", "test-node"),
-		containerruntime: rt,
+		containerruntime: &rt,
 	}
 	m.Run()
 }
@@ -44,7 +42,7 @@ func TestPodCreate(t *testing.T) {
 	}
 	t.Run("test pod create", func(t *testing.T) {
 		for _, p := range testPods {
-			_, err := testKubelet.handlePodCreate(t.Context(), p)
+			err := testKubelet.containerruntime.CreatePod(t.Context(), p)
 			if err != nil {
 				t.Errorf("failed to create pod: %v", err)
 			}
