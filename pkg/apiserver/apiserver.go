@@ -33,18 +33,8 @@ func (s *APIServer) Shutdown() {
 	s.server.Close()
 }
 
-func Start() error {
-	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	s, err := NewAPIServer()
-	go func() {
-		<-sigCtx.Done()
-		s.Shutdown()
-	}()
-	if err != nil {
-		return fmt.Errorf("failed to create API server: %w", err)
-	}
-	slog.Info("starting API server...")
+// Setup configures routes and initializes the HTTP server.
+func (s *APIServer) Setup() {
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
 	r.Use(loggingMiddleware)
@@ -56,24 +46,48 @@ func Start() error {
 	api.HandleFunc("/pod", podHandler.GetPod).Queries("nodename", "{nodename}", "uid", "{uid}")
 	// post is probably the better verb here
 	api.HandleFunc("/watch", watchService.WatchHandler).Methods(http.MethodGet)
-	// TODO: will eventually initialize server inside NewAPIServer()
+
 	s.server = &http.Server{
-		Addr:    ":8080",
+		Addr:    s.opts.Addr,
 		Handler: r,
 	}
-	slog.Info("server listening on :8080")
-	err = s.server.ListenAndServe()
+}
+
+// ListenAndServe starts the server. Blocks until server stops.
+func (s *APIServer) ListenAndServe() error {
+	slog.Info("server listening", slog.String("addr", s.opts.Addr))
+	err := s.server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("API server failed to start: %w", err)
+		return fmt.Errorf("API server failed: %w", err)
 	}
 	return nil
 }
 
-func NewAPIServer() (*APIServer, error) {
+func Start() error {
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	s, err := NewAPIServer(APIServerOpts{Addr: ":8080"})
+	if err != nil {
+		return fmt.Errorf("failed to create API server: %w", err)
+	}
+
+	go func() {
+		<-sigCtx.Done()
+		s.Shutdown()
+	}()
+
+	slog.Info("starting API server...")
+	s.Setup()
+	return s.ListenAndServe()
+}
+
+func NewAPIServer(opts APIServerOpts) (*APIServer, error) {
 	return &APIServer{
 		redisClient: redis.NewClient(&redis.Options{
 			Addr: "localhost:6379", // TODO: make configurable, got so many options to worry about now
 		}),
+		opts: opts,
 	}, nil
 }
 
@@ -81,6 +95,9 @@ func NewAPIServer() (*APIServer, error) {
 type APIServer struct {
 	server      *http.Server
 	redisClient *redis.Client
-	// TODO
-	config interface{}
+	opts        APIServerOpts
+}
+
+type APIServerOpts struct {
+	Addr string
 }
