@@ -1,19 +1,25 @@
 package pod
 
 import (
+	"os"
 	"testing"
 
 	"github.com/go-redis/redis/v8"
 
 	"superminikube/pkg/api"
-	// TODO: probably need to create a TestMain and do some orchestration...
 	"superminikube/pkg/apiserver/watch"
 )
 
-// TODO: prefill test client with some data
-var testClient = redis.NewClient(&redis.Options{
-	Addr: "localhost:6379",
-})
+var testClient *redis.Client
+
+func TestMain(m *testing.M) {
+	testClient = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	code := m.Run()
+	testClient.Close()
+	os.Exit(code)
+}
 
 func TestCreatePod(t *testing.T) {
 	testWatchService := watch.NewService()
