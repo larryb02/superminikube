@@ -91,6 +91,7 @@ func TestPodCreation(t *testing.T) {
 
 	t.Logf("Created pod with UID: %s", createdPod.Uid)
 
+	// NOTE: bad. ideally there is some notify mechanism that alerts that a pod has been created which leads to updating fields like PodStatus
 	time.Sleep(500 * time.Millisecond)
 
 	pods := testKubelet.ListPods()
