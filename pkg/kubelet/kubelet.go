@@ -22,19 +22,14 @@ func (k *Kubelet) handlePodEvent(ctx context.Context, event watch.WatchEvent) {
 	switch event.EventType {
 	case watch.Add:
 		slog.Info("creating pod with spec... on node...")
-		err := k.containerruntime.CreatePod(ctx, event.Pod.Spec)
+		res, err := k.containerruntime.CreatePod(ctx, event.Pod.Spec)
 		if err != nil {
 			slog.Error("failed to create pod", "err", err)
 			return
 		}
-		// cid, err := k.handlePodCreate(ctx, event.Pod.Spec)
-		// if err != nil {
-		// 	slog.Error("failed to create pod", "err", err)
-		// 	return
-		// }
-		// p := event.Pod
-		// p.Spec.Container.ContainerId = cid
-		// k.AddPod(p)
+		p := event.Pod
+		p.Spec.Container.ContainerId = res.ContainerId
+		k.AddPod(p)
 	case watch.Delete:
 		break
 	default:

@@ -31,15 +31,14 @@ func (dr DockerRuntime) DeletePod(ctx context.Context, p api.Pod) error {
 	return nil
 }
 
-func (dr DockerRuntime) CreatePod(ctx context.Context, spec api.PodSpec) error {
-	// pull image
+func (dr DockerRuntime) CreatePod(ctx context.Context, spec api.PodSpec) (CreatePodResponse, error) {
 	pullOpts := client.ImagePullOptions{
 		Platforms: []ocispec.Platform{{Architecture: "amd64", OS: "linux"}},
 	}
 	slog.Info("Attempting to pull", "image", spec.Container.Image)
 	resp, err := dr.containerruntime.ImagePull(ctx, spec.Container.Image, pullOpts)
 	if err != nil {
-		return fmt.Errorf("failed to pull image: %v", err)
+		return CreatePodResponse{}, fmt.Errorf("failed to pull image: %v", err)
 	}
 	var pullErrs []*jsonstream.Error
 	for m := range resp.JSONMessages(ctx) {
@@ -50,24 +49,23 @@ func (dr DockerRuntime) CreatePod(ctx context.Context, spec api.PodSpec) error {
 		}
 	}
 	if len(pullErrs) > 0 {
-		return fmt.Errorf("failed to pull image: %v", pullErrs)
+		return CreatePodResponse{}, fmt.Errorf("failed to pull image: %v", pullErrs)
 	}
 	containerOpts, err := PodSpecToCreateContainerOpts(spec)
 	if err != nil {
-		return fmt.Errorf("failed to create container opts: %v", err)
+		return CreatePodResponse{}, fmt.Errorf("failed to create container opts: %v", err)
 	}
 	createRes, err := dr.containerruntime.ContainerCreate(ctx, containerOpts)
 	if err != nil {
-		return fmt.Errorf("failed to create container: %v", err)
+		return CreatePodResponse{}, fmt.Errorf("failed to create container: %v", err)
 	}
 	slog.Info("Created", "container", createRes.ID)
-	// start container
 	_, err = dr.containerruntime.ContainerStart(ctx, createRes.ID, client.ContainerStartOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to start container: %v", err)
+		return CreatePodResponse{}, fmt.Errorf("failed to start container: %v", err)
 	}
 	slog.Info("Started", "container", createRes.ID)
-	return nil
+	return CreatePodResponse{ContainerId: createRes.ID}, nil
 }
 
 func NewDockerRuntime() (DockerRuntime, error) {
@@ -93,9 +91,9 @@ func (fr *FakeRuntime) DeletePod(ctx context.Context, pod api.Pod) error {
 	return nil
 }
 
-func (fr *FakeRuntime) CreatePod(ctx context.Context, spec api.PodSpec) error {
+func (fr *FakeRuntime) CreatePod(ctx context.Context, spec api.PodSpec) (CreatePodResponse, error) {
 	fr.CreatedPods = append(fr.CreatedPods, spec)
-	return nil
+	return CreatePodResponse{ContainerId: "fake-container-id"}, nil
 }
 
 type FakeRuntime struct {
@@ -103,11 +101,13 @@ type FakeRuntime struct {
 	DeletedPods []api.Pod
 }
 
+type CreatePodResponse struct {
+	ContainerId string
+}
+
 type ContainerRuntime interface {
 	Ping(context.Context) error
-	// pulls image, creates, and starts container
-	CreatePod(context.Context, api.PodSpec) error
-	// kill and removes containers in pod
+	CreatePod(context.Context, api.PodSpec) (CreatePodResponse, error)
 	DeletePod(context.Context, api.Pod) error
 }
 

@@ -42,7 +42,7 @@ func TestPodCreate(t *testing.T) {
 	}
 	t.Run("test pod create", func(t *testing.T) {
 		for _, p := range testPods {
-			err := testKubelet.containerruntime.CreatePod(t.Context(), p)
+			_, err := testKubelet.containerruntime.CreatePod(t.Context(), p)
 			if err != nil {
 				t.Errorf("failed to create pod: %v", err)
 			}
