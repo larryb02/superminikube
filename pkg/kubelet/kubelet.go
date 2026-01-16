@@ -13,6 +13,22 @@ import (
 	"superminikube/pkg/kubelet/runtime"
 )
 
+func (k *Kubelet) ListPods() []api.Pod {
+	pods := make([]api.Pod, 0)
+	for _, v := range k.pods {
+		pods = append(pods, v)
+	}
+	return pods
+}
+
+func (k *Kubelet) GetPod(uid uuid.UUID) (api.Pod, error) {
+	p, ok := k.pods[uid]
+	if !ok {
+		return api.Pod{}, fmt.Errorf("pod not found: %s", uid)
+	}
+	return p, nil
+}
+
 func (k *Kubelet) AddPod(p api.Pod) {
 	k.pods[p.Uid] = p
 	slog.Debug("added pod to internal map", "pods", k.pods, "added", p)
@@ -48,7 +64,7 @@ func (k *Kubelet) syncLoop(ctx context.Context, events <-chan watch.WatchEvent) 
 		case event, ok := <-events:
 			if !ok {
 				slog.Info("event channel closed")
-				return // works for now -> 
+				return // works for now ->
 				// i guess best behavior would be to restart kubelet once user gets cluster working again
 			}
 			slog.Debug("Got event", "event", event)
@@ -171,7 +187,7 @@ func NewKubeletWithRuntime(apiServerURL, nodeName string, rt runtime.ContainerRu
 }
 
 type Kubelet struct {
-	client           client.Client
+	client client.Client
 	// containerruntime *mobyclient.Client
 	containerruntime runtime.ContainerRuntime
 	pods             map[uuid.UUID]api.Pod

@@ -91,5 +91,15 @@ func TestPodCreation(t *testing.T) {
 
 	t.Logf("Created pod with UID: %s", createdPod.Uid)
 
-	// TODO: Add verification logic once the code exists
+	time.Sleep(500 * time.Millisecond)
+
+	pods := testKubelet.ListPods()
+	if len(pods) != 1 {
+		t.Fatalf("expected 1 pod, got %d", len(pods))
+	}
+
+	_, err = testKubelet.GetPod(createdPod.Uid)
+	if err != nil {
+		t.Fatalf("failed to get pod: %v", err)
+	}
 }

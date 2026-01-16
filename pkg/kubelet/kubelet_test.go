@@ -1,24 +1,25 @@
 package kubelet
 
 import (
+	"os"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"superminikube/pkg/api"
-	"superminikube/pkg/client"
 	"superminikube/pkg/kubelet/runtime"
 )
 
 var testKubelet *Kubelet
 
 func TestMain(m *testing.M) {
-	rt := runtime.FakeRuntime{
+	rt := &runtime.FakeRuntime{}
+	testKubelet = NewKubeletWithRuntime("http://localhost:8080", "test-node", rt)
 
-	}
-	testKubelet = &Kubelet{
-		client:  client.NewHTTPClient("http://localhost:8080", "test-node"),
-		containerruntime: &rt,
-	}
-	m.Run()
+	code := m.Run()
+
+	testKubelet.pods = map[uuid.UUID]api.Pod{}
+	os.Exit(code)
 }
 
 func TestPodCreate(t *testing.T) {
@@ -50,12 +51,28 @@ func TestPodCreate(t *testing.T) {
 	})
 }
 
-// TODO
-// func TestPodCleanup(t *testing.T) {
-// 	t.Run("test pod cleanup", func(t *testing.T) {
-// 		errs := testKubelet.Cleanup()
-// 		if len(errs) > 0 {
-// 			t.Errorf("cleanup failed: %v", errs)
-// 		}
-// 	})
-// }
+func TestListPods(t *testing.T) {
+	// TODO: wiping the pods map even in a test can lead to unintended behavior
+	testKubelet.pods = map[uuid.UUID]api.Pod{}
+
+	pods := testKubelet.ListPods()
+	if len(pods) != 0 {
+		t.Errorf("expected 0 pods, got %d", len(pods))
+	}
+
+	testKubelet.AddPod(api.Pod{
+		Uid:      uuid.New(),
+		Nodename: "test-node",
+		Spec:     api.PodSpec{Container: api.Container{Image: "alpine"}},
+	})
+	testKubelet.AddPod(api.Pod{
+		Uid:      uuid.New(),
+		Nodename: "test-node",
+		Spec:     api.PodSpec{Container: api.Container{Image: "nginx"}},
+	})
+
+	pods = testKubelet.ListPods()
+	if len(pods) != 2 {
+		t.Errorf("expected 2 pods, got %d", len(pods))
+	}
+}
