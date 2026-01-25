@@ -1,9 +1,12 @@
 package watch
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
+
+	etcdClient "go.etcd.io/etcd/client/v3"
 
 	"superminikube/pkg/api"
 )
@@ -62,21 +65,32 @@ func (ws *WatchService) Notify(ev WatchEvent) error {
 }
 
 func (ws *WatchService) Watch(key string) <-chan WatchEvent {
+	// what watch will do now:
+	// create the channel
+	// start a goroutine
+	// etcd Watch
+	// send WatchEvent to channel when etcd Watch notifies
+	// considerations
+	// how do we handle disconnects i.e. client disconnected
+	ev := ws.etcd.Watcher.Watch(context.TODO(), key)
+	// probably should document what these keys look like: 'typically a resource pod/node'
+	// 
 	// make a channel for the key add it to map of channels
 	// TODO: Avoid making duplicate channels
-	ev := make(chan WatchEvent)
-	err := ws.Set(key, ev)
-	if err != nil {
-		// TODO: return error
-		slog.Error("failed to add channel to watchers")
-		return nil
-	}
+	// ev := make(chan WatchEvent)
+	// err := ws.Set(key, ev)
+	// if err != nil {
+	// 	// TODO: return error
+	// 	slog.Error("failed to add channel to watchers")
+	// 	return nil
+	// }
 	return ev
 }
 
-func NewService() *WatchService {
+func NewService(client *etcdClient.Client) *WatchService {
 	return &WatchService{
 		watchers: make(Watchers),
+		etcd: client,
 	}
 }
 
@@ -102,4 +116,5 @@ type Watchers map[string]chan WatchEvent
 type WatchService struct {
 	watchers Watchers
 	mu       sync.RWMutex
+	etcd     *etcdClient.Client
 }

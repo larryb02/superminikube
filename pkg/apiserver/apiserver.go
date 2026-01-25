@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	etcdClient "go.etcd.io/etcd/client/v3"
 
 	"superminikube/pkg/apiserver/pod"
 	"superminikube/pkg/apiserver/watch"
@@ -39,7 +40,7 @@ func (s *APIServer) Setup() {
 	api := r.PathPrefix("/api/v1").Subrouter()
 	r.Use(loggingMiddleware)
 	// TODO: This is proof that notify needs to exist elsewhere...
-	watchService := watch.NewService()
+	watchService := watch.NewService(s.etcdClient)
 	podService := pod.NewService(s.redisClient, watchService)
 	podHandler := pod.NewHandler(podService)
 	api.HandleFunc("/pod", podHandler.CreatePod).Queries("nodename", "{nodename}")
@@ -91,10 +92,10 @@ func NewAPIServer(opts APIServerOpts) (*APIServer, error) {
 	}, nil
 }
 
-
 type APIServer struct {
 	server      *http.Server
 	redisClient *redis.Client
+	etcdClient  *etcdClient.Client
 	opts        APIServerOpts
 }
 
